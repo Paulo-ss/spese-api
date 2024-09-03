@@ -1,0 +1,57 @@
+services:
+  speseauthdb:
+    image: postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=asuperhardandsecurepassword
+      - POSTGRES_DB=spese_auth
+    ports:
+      - 5434:5432
+    volumes:
+      - ~/../../srv/volumes/postgres/spese/auth:/var/lib/postgresql/data
+
+  keys:
+    build: ./keys
+    command: tail -f /dev/null
+    volumes:
+      - ./keys:/home/spese/keys
+
+  gateway:
+    build: ./gateway
+    command: npm run start:dev
+    restart: always
+    ports:
+      - 8082:8082
+    env_file:
+      - ./gateway/.env
+    volumes:
+      - ./gateway:/home/spese/gateway
+    depends_on:
+      - speseauthdb
+    volumes_from:
+      - keys
+
+  authorization:
+    build: ./authorization
+    command: npm run start:dev
+    restart: always
+    ports:
+      - 8083:8083
+    env_file:
+      - ./authorization/.env
+    volumes:
+      - ./authorization:/home/spese/authorization
+    depends_on:
+      - speseauthdb
+    volumes_from:
+      - keys
+
+  communication:
+    build: ./communication
+    command: npm run start:dev
+    restart: always
+    env_file:
+      - ./communication/.env
+    volumes:
+      - ./communication:/home/spese/communication
