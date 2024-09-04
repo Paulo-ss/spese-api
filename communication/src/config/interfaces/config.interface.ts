@@ -1,0 +1,16 @@
+interface IEmailAuth {
+  user: string;
+  pass: string;
+}
+
+export interface IEmailConfig {
+  host: string;
+  port: number;
+  secure: boolean;
+  auth: IEmailAuth;
+}
+
+export interface IConfig {
+  emailConfig: IEmailConfig;
+  domain: string;
+}

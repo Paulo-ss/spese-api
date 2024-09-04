@@ -4,7 +4,7 @@ import { IConfig } from './interfaces/config.interface';
 
 export function config(): IConfig {
   const publicKey = readFileSync(
-    join(__dirname, '..', '..', '..', 'keys/public.key'),
+    join(__dirname, '..', '..', '..', 'keys/key.pub'),
     'utf-8',
   );
   const privateKey = readFileSync(
