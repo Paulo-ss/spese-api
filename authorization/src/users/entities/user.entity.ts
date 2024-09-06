@@ -1,4 +1,11 @@
-import { IsBoolean, IsEmail, IsString, Length, Matches } from 'class-validator';
+import {
+  IsBoolean,
+  IsEmail,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+} from 'class-validator';
 import {
   BCRYPT_HASH,
   NAME_REGEX,
@@ -33,7 +40,8 @@ export class UserEntity {
   @Length(5, 255)
   public email: string;
 
-  @Column({ name: 'password' })
+  @Column({ name: 'password', nullable: true })
+  @IsOptional()
   @IsString()
   @Length(59, 60)
   @Matches(BCRYPT_HASH)

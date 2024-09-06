@@ -39,5 +39,8 @@ export function config(): IConfig {
       dbName: process.env.POSTGRES_DB,
       port: process.env.POSTGRES_PORT,
     },
+    googleoAuth2: {
+      clientId: process.env.GOOGLE_OAUTH_CLIENT_ID,
+    },
   };
 }

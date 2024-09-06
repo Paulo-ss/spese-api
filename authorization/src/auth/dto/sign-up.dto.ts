@@ -1,4 +1,10 @@
-import { IsEmail, IsString, Length, Matches } from 'class-validator';
+import {
+  IsEmail,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+} from 'class-validator';
 import { NAME_REGEX, PASSWORD_REGEX } from 'src/common/utils/regex.const';
 
 export class SignUpDto {
@@ -16,19 +22,21 @@ export class SignUpDto {
   @Length(5, 255, { message: 'O E-Mail deve conter entre 5 a 255 caracteres.' })
   public email: string;
 
+  @IsOptional()
   @IsString({ message: 'A senha deve ser um texto.' })
   @Length(8, 35, { message: 'A senha deve contem entre 8 a 35 caracteres.' })
   @Matches(PASSWORD_REGEX, {
     message:
       'A senha precisa de uma letra minúscula, maiúscula, e um número ou caracter especial.',
   })
-  public password: string;
+  public password?: string;
 
+  @IsOptional()
   @IsString({ message: 'A senha deve ser um texto.' })
   @Length(8, 35, { message: 'A senha deve contem entre 8 a 35 caracteres.' })
   @Matches(PASSWORD_REGEX, {
     message:
       'A senha precisa de uma letra minúscula, maiúscula, e um número ou caracter especial.',
   })
-  public passwordConfirmation: string;
+  public passwordConfirmation?: string;
 }

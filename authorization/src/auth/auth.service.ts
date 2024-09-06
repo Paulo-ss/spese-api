@@ -24,6 +24,9 @@ import {
 } from 'src/jwt/interfaces/tokens.interface';
 import { ResetPasswordEmailDto } from './dto/reset-password-emai.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { isNull, isUndefined } from 'src/common/utils/validation.utils';
+import { ExternalSignInDto } from './dto/external-sign-in.dto';
+import { ExternalOauthService } from './external-oauth/services/external-oauth.abstract.service';
 
 @Injectable()
 export class AuthService {
@@ -35,6 +38,8 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly commonService: CommonService,
     private readonly jwtService: JwtService,
+    @Inject('EXTERNAL_OAUTH_PROVIDERS')
+    private readonly externalOauthServices: ExternalOauthService[],
   ) {}
 
   private comparePasswords(password1: string, password2: string): void {
@@ -80,6 +85,7 @@ export class AuthService {
     this.comparePasswords(password, passwordConfirmation);
 
     const user = await this.usersService.create(name, password, email);
+
     const confirmationToken = await this.jwtService.generateToken(
       user,
       TokenType.CONFIRMATION_TOKEN,
@@ -91,7 +97,7 @@ export class AuthService {
     );
 
     return this.commonService.generateGenericMessageResponse(
-      'Conta criada com sucesso! Por favor, confirme seu e-mail.',
+      `Conta criada com sucesso! Por favor, confirme seu e-mail.`,
     );
   }
 
@@ -101,7 +107,11 @@ export class AuthService {
     const user =
       await this.usersService.findOneByEmailOrUsername(emailOrUsername);
 
-    if (!(await compare(password, user.password))) {
+    if (
+      isUndefined(user.password) ||
+      isNull(user.password) ||
+      !(await compare(password, user.password))
+    ) {
       throw new BadRequestException('Credenciais incorretas.');
     }
 
@@ -131,6 +141,40 @@ export class AuthService {
     );
 
     return { accessToken, refreshToken, user: UserDto.entityToDto(user) };
+  }
+
+  public async externalOauthSignIn(
+    externalOauthSignIn: ExternalSignInDto,
+  ): Promise<IAuthResult> {
+    const { provider } = externalOauthSignIn;
+
+    const externalOauthService = this.externalOauthServices.find(
+      (service) => service.oauthProviderName === provider,
+    );
+    const { email, name } =
+      await externalOauthService.validateExternalProviderToken(
+        externalOauthSignIn,
+      );
+    let user = await this.usersService.findOneByEmail(email);
+
+    if (isUndefined(user) || isNull(user)) {
+      user = await this.usersService.externalOauthCreate(name, email);
+    }
+
+    const accessToken = await this.jwtService.generateToken(
+      user,
+      TokenType.ACCESS_TOKEN,
+    );
+    const refreshToken = await this.jwtService.generateToken(
+      user,
+      TokenType.REFRESH_TOKEN,
+    );
+
+    return {
+      accessToken,
+      refreshToken,
+      user: UserDto.entityToDto(user),
+    };
   }
 
   public async refreshAccessToken(refreshToken: string): Promise<IAuthResult> {

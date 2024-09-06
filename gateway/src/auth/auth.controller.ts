@@ -8,7 +8,7 @@ import { ResetPasswordEmailDto } from './dto/reset-password-emai.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { IsAuthenticatedGuard } from 'src/guards/is-authenticated.guard';
 
-@Controller('auth/oauth')
+@Controller('authorization')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 

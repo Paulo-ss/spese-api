@@ -1,11 +1,5 @@
-import {
-  Controller,
-  UseFilters,
-  UsePipes,
-  ValidationPipe,
-} from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { RcpExceptionFilter } from 'src/filters/rcp-exception.filter';
 import { MessagePattern } from '@nestjs/microservices';
 import { SignUpDto } from './dto/sign-up.dto';
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
@@ -14,9 +8,7 @@ import { IAuthResult } from './interfaces/auth-result.interface';
 import { ResetPasswordEmailDto } from './dto/reset-password-emai.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 
-@UseFilters(new RcpExceptionFilter())
-@UsePipes(new ValidationPipe())
-@Controller('auth')
+@Controller()
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 

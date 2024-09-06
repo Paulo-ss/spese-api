@@ -46,9 +46,15 @@ export class UsersService {
     return user;
   }
 
-  public async findOneByEmail(email: string): Promise<UserEntity> {
+  public async findOneByEmail(
+    email: string,
+    checkForExistence = true,
+  ): Promise<UserEntity> {
     const user = await this.usersRepository.findOneBy({ email });
-    this.commonService.checkEntityExistence(user, 'Usuário');
+
+    if (checkForExistence) {
+      this.commonService.checkEntityExistence(user, 'Usuário');
+    }
 
     return user;
   }
@@ -84,6 +90,27 @@ export class UsersService {
       username: await this.generateUsername(formattedName),
       password: await hash(password, 10),
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    await this.commonService.saveEntity<UserEntity>(this.usersRepository, user);
+    return user;
+  }
+
+  public async externalOauthCreate(
+    name: string,
+    email: string,
+  ): Promise<UserEntity> {
+    await this.checkIfEmailAlreadyExists(email);
+
+    const formattedName = this.commonService.formatName(name);
+    const user = this.usersRepository.create({
+      email,
+      name: formattedName,
+      username: await this.generateUsername(formattedName),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      confirmed: true,
     });
 
     await this.commonService.saveEntity<UserEntity>(this.usersRepository, user);
@@ -105,6 +132,7 @@ export class UsersService {
   ): Promise<UserEntity> {
     const user = await this.findOneById(userId);
     user.password = await hash(password, 10);
+    user.updatedAt = new Date().toISOString();
 
     await this.commonService.saveEntity(this.usersRepository, user);
     return user;
@@ -112,6 +140,7 @@ export class UsersService {
 
   public async confirmUser(user: UserEntity): Promise<void> {
     user.confirmed = true;
+    user.updatedAt = new Date().toISOString();
 
     await this.commonService.saveEntity(this.usersRepository, user);
   }
