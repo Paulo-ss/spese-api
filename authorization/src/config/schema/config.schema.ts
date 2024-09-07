@@ -14,7 +14,4 @@ export const validationSchema = Joi.object({
   POSTGRES_HOST: Joi.string().required(),
   POSTGRES_PORT: Joi.number().required(),
   GOOGLE_OAUTH_CLIENT_ID: Joi.string().required(),
-  GOOGLE_OAUTH_CLIENT_SECRET: Joi.string().required(),
-  GOOGLE_OAUTH_CALLBACK_URL: Joi.string().required(),
-  GOOGLE_OAUTH_SCOPES: Joi.string().required(),
 });
