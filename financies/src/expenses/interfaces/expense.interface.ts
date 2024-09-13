@@ -2,6 +2,7 @@ import { ICreditCard } from 'src/credit-cards/interfaces/credit-card.interface';
 import { ExpenseType } from '../enums/expense-type.enum';
 import { ExpenseStatus } from '../enums/expense-status.enum';
 import { IBankAccount } from 'src/bank-accounts/interfaces/bank-account.interface';
+import { ExpenseCategory } from '../enums/expense-category.enum';
 
 export interface IExpense {
   id: number;
@@ -10,9 +11,9 @@ export interface IExpense {
   name: string;
   price: number;
   status: ExpenseStatus;
-  monthly: boolean;
-  createdAt: Date;
+  expenseDate: Date;
   updatedAt: Date;
+  category?: ExpenseCategory;
   bankAccount?: IBankAccount;
   creditCard?: ICreditCard;
   installments?: number;

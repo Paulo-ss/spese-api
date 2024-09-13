@@ -14,6 +14,7 @@ import { BankAccountEntity } from './bank-accounts/entities/bank.entity';
 import { CreditCardEntity } from './credit-cards/entities/credit-card.entity';
 import { InstallmentEntity } from './credit-cards/entities/installment.entity';
 import { InvoiceEntity } from './credit-cards/entities/invoice.entity';
+import { SubscriptionEntity } from './credit-cards/entities/subscription.entity';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { InvoiceEntity } from './credit-cards/entities/invoice.entity';
         CreditCardEntity,
         InstallmentEntity,
         InvoiceEntity,
+        SubscriptionEntity,
       ],
       synchronize: true,
     }),

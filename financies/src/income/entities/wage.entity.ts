@@ -12,10 +12,10 @@ export class WageEntity implements IWage {
   @PrimaryGeneratedColumn()
   public id: number;
 
-  @Column({ name: 'wage' })
+  @Column('decimal', { name: 'wage', precision: 10, scale: 2 })
   public wage: number;
 
-  @Column({ name: 'user_id' })
+  @Column({ name: 'user_id', unique: true })
   public userId: number;
 
   @CreateDateColumn({ name: 'created_at' })

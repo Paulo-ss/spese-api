@@ -1,9 +1,8 @@
 import {
   Column,
-  CreateDateColumn,
   Entity,
-  JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -14,28 +13,29 @@ import { ExpenseType } from '../enums/expense-type.enum';
 import { ExpenseStatus } from '../enums/expense-status.enum';
 import { BankAccountEntity } from 'src/bank-accounts/entities/bank.entity';
 import { CreditCardEntity } from 'src/credit-cards/entities/credit-card.entity';
+import { ExpenseCategory } from '../enums/expense-category.enum';
+import { IInvoice } from 'src/credit-cards/interfaces/invoice.interface';
+import { InvoiceEntity } from 'src/credit-cards/entities/invoice.entity';
 
 @Entity({ name: 'expenses' })
 export class ExpenseEntity implements IExpense {
   @PrimaryGeneratedColumn()
   public id: number;
 
-  @Column('integer', { name: 'bank_account', nullable: true })
-  @ManyToOne(() => BankAccountEntity)
+  @ManyToOne(() => BankAccountEntity, (bankAccount) => bankAccount.expenses)
   public bankAccount?: IBankAccount;
 
-  @Column('integer', { name: 'credit_card', nullable: true })
-  @ManyToOne(() => CreditCardEntity)
+  @OneToMany(() => CreditCardEntity, (creditCard) => creditCard.expenses)
   public creditCard?: ICreditCard;
 
   @Column({ name: 'expense_type', enum: ExpenseType })
   public expenseType: ExpenseType;
 
+  @ManyToOne(() => InvoiceEntity, (invoice) => invoice.expenses)
+  public invoice?: IInvoice;
+
   @Column({ name: 'installments', nullable: true })
   public installments?: number;
-
-  @Column({ name: 'monthly', default: false })
-  public monthly: boolean;
 
   @Column({ name: 'name' })
   public name: string;
@@ -46,11 +46,14 @@ export class ExpenseEntity implements IExpense {
   @Column({ name: 'status', enum: ExpenseStatus })
   public status: ExpenseStatus;
 
+  @Column('enum', { name: 'category', enum: ExpenseCategory, nullable: true })
+  public category?: ExpenseCategory;
+
   @Column({ name: 'user_id' })
   public userId: number;
 
-  @CreateDateColumn({ name: 'created_at' })
-  public createdAt: Date;
+  @Column('date', { name: 'created_at' })
+  public expenseDate: Date;
 
   @UpdateDateColumn({ name: 'updated_at' })
   public updatedAt: Date;
