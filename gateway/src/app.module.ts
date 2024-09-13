@@ -5,9 +5,12 @@ import { UsersController } from './users/users.controller';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { BankAccountModule } from './bank-account/bank-account.module';
+import { IncomeModule } from './income/income.module';
+import { CreditCardModule } from './credit-card/credit-card.module';
+import { ExpenseModule } from './expense/expense.module';
 
 @Module({
-  imports: [UsersModule, AuthModule, BankAccountModule],
+  imports: [UsersModule, AuthModule, BankAccountModule, IncomeModule, CreditCardModule, ExpenseModule],
   controllers: [AppController, UsersController],
   providers: [AppService],
 })

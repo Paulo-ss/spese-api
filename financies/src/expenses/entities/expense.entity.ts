@@ -25,7 +25,7 @@ export class ExpenseEntity implements IExpense {
   @ManyToOne(() => BankAccountEntity, (bankAccount) => bankAccount.expenses)
   public bankAccount?: IBankAccount;
 
-  @OneToMany(() => CreditCardEntity, (creditCard) => creditCard.expenses)
+  @ManyToOne(() => CreditCardEntity, (creditCard) => creditCard.expenses)
   public creditCard?: ICreditCard;
 
   @Column({ name: 'expense_type', enum: ExpenseType })
@@ -34,8 +34,8 @@ export class ExpenseEntity implements IExpense {
   @ManyToOne(() => InvoiceEntity, (invoice) => invoice.expenses)
   public invoice?: IInvoice;
 
-  @Column({ name: 'installments', nullable: true })
-  public installments?: number;
+  @Column({ name: 'installment_number', nullable: true })
+  public installmentNumber?: number;
 
   @Column({ name: 'name' })
   public name: string;
@@ -52,7 +52,7 @@ export class ExpenseEntity implements IExpense {
   @Column({ name: 'user_id' })
   public userId: number;
 
-  @Column('date', { name: 'created_at' })
+  @Column('date', { name: 'expense_date' })
   public expenseDate: Date;
 
   @UpdateDateColumn({ name: 'updated_at' })

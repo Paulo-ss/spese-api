@@ -16,5 +16,5 @@ export interface IExpense {
   category?: ExpenseCategory;
   bankAccount?: IBankAccount;
   creditCard?: ICreditCard;
-  installments?: number;
+  installmentNumber?: number;
 }

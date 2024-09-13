@@ -12,7 +12,6 @@ import { IncomeEntity } from './income/entities/income.entity';
 import { WageEntity } from './income/entities/wage.entity';
 import { BankAccountEntity } from './bank-accounts/entities/bank.entity';
 import { CreditCardEntity } from './credit-cards/entities/credit-card.entity';
-import { InstallmentEntity } from './credit-cards/entities/installment.entity';
 import { InvoiceEntity } from './credit-cards/entities/invoice.entity';
 import { SubscriptionEntity } from './credit-cards/entities/subscription.entity';
 
@@ -31,7 +30,6 @@ import { SubscriptionEntity } from './credit-cards/entities/subscription.entity'
         WageEntity,
         BankAccountEntity,
         CreditCardEntity,
-        InstallmentEntity,
         InvoiceEntity,
         SubscriptionEntity,
       ],

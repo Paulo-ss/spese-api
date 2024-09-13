@@ -5,11 +5,12 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
   Min,
 } from 'class-validator';
 import { ExpenseCategory } from '../enums/expense-category.enum';
-import { ExpenseStatus } from '../enums/expense-status.enum';
 import { ExpenseType } from '../enums/expense-type.enum';
+import { DATE_MM_DD_YYYY_REGEX } from 'src/common/utils/validation.utils';
 
 export class CreateExpenseDto {
   @IsOptional()
@@ -31,12 +32,11 @@ export class CreateExpenseDto {
   @IsString()
   public name: string;
 
-  @IsNumber()
-  @IsDecimal()
+  @IsNumber(
+    { maxDecimalPlaces: 2 },
+    { message: 'Digite um valor real R$ válido. Ex: 11.99' },
+  )
   public price: number;
-
-  @IsEnum(ExpenseStatus)
-  public status: ExpenseStatus;
 
   @IsOptional()
   @IsEnum(ExpenseCategory)
@@ -45,6 +45,8 @@ export class CreateExpenseDto {
   @IsNumber()
   public userId: number;
 
-  @IsDate()
-  public expenseDate: Date;
+  @Matches(DATE_MM_DD_YYYY_REGEX, {
+    message: 'A data deve estar no formato MM-dd-yyyy',
+  })
+  public expenseDate: string;
 }

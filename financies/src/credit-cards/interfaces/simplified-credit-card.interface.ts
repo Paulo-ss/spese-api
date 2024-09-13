@@ -7,6 +7,7 @@ export interface SimplifiedCreditCardInterface {
   otherMonthsTotal: number;
   closedTotal: number;
   bank: Banks;
-  dueDay: number;
+  closingDate: Date;
+  dueDate: Date;
   limit: number;
 }

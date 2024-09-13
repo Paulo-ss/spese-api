@@ -10,7 +10,7 @@ import { Banks } from 'src/bank-accounts/enums/banks.enum';
 
 export class UpdateCreditCardDto {
   @IsNumber()
-  public credtiCardId: number;
+  public creditCardId: number;
 
   @IsOptional()
   @IsString()

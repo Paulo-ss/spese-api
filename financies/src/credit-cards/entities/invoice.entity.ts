@@ -8,7 +8,6 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { IInvoice } from '../interfaces/invoice.interface';
-import { ICreditCard } from '../interfaces/credit-card.interface';
 import { CreditCardEntity } from './credit-card.entity';
 import { ExpenseEntity } from 'src/expenses/entities/expense.entity';
 import { InvoiceStatus } from '../enums/invoice-status.enum';
@@ -28,7 +27,7 @@ export class InvoiceEntity implements IInvoice {
   public dueDate: Date;
 
   @ManyToOne(() => CreditCardEntity, (creditCard) => creditCard.invoices)
-  public creditCard: ICreditCard;
+  public creditCard: CreditCardEntity;
 
   @OneToMany(() => ExpenseEntity, (expense) => expense.invoice)
   public expenses: ExpenseEntity[];

@@ -24,8 +24,7 @@ export class CreditCardsService {
     const credtiCard = await this.creditCardRepository.findOne({
       where: { id: credtiCardId },
       relations: {
-        installments: true,
-        invoices: true,
+        invoices: { expenses: true },
         subscriptions: true,
       },
     });
@@ -40,20 +39,12 @@ export class CreditCardsService {
     return credtiCard;
   }
 
-  public async findByUserIdAndMonth(
-    userId: number,
-    invoiceDate: string,
-  ): Promise<CreditCardEntity[]> {
-    new Date(9, 2024);
-    const [month, year] = invoiceDate.split('-').map(Number);
-
+  public async findByUserId(userId: number): Promise<CreditCardEntity[]> {
     const creditCards = await this.creditCardRepository
       .createQueryBuilder('cc')
       .leftJoinAndSelect('cc.invoices', 'invoice')
+      .leftJoinAndSelect('cc.subscriptions', 'subscriptions')
       .where('cc.user_id = :userId', { userId })
-      .andWhere('invoice.invoice_date === :invoiceDate', {
-        invoiceDate: new Date(year, month),
-      })
       .getMany();
 
     return creditCards;
@@ -77,9 +68,9 @@ export class CreditCardsService {
   public async update(
     updateCreditCardDto: UpdateCreditCardDto,
   ): Promise<CreditCardEntity> {
-    const { credtiCardId, userId } = updateCreditCardDto;
+    const { creditCardId, userId } = updateCreditCardDto;
 
-    const creditCard = await this.findById(credtiCardId, userId);
+    const creditCard = await this.findById(creditCardId, userId);
 
     Object.keys(updateCreditCardDto).forEach((key) => {
       if (

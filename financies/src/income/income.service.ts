@@ -42,12 +42,13 @@ export class IncomeService {
   }
 
   public async create(createIncome: CreateIncomeDto): Promise<IncomeEntity> {
-    const [month, year] = createIncome.incomeMonth.split('-').map(Number);
+    const [month, day, year] = createIncome.incomeMonth.split('-').map(Number);
 
     const newIncome = this.incomesRepository.create({
       name: createIncome.name,
       value: createIncome.value,
-      incomeMonth: new Date(year, month),
+      incomeMonth: new Date(year, month - 1, day),
+      userId: createIncome.userId,
     });
 
     await this.commonService.saveEntity(this.incomesRepository, newIncome);
@@ -73,8 +74,8 @@ export class IncomeService {
     }
 
     if (!isUndefined(incomeMonth) && !isNull(incomeMonth)) {
-      const [month, year] = incomeMonth.split('-').map(Number);
-      income.incomeMonth = new Date(year, month);
+      const [month, day, year] = incomeMonth.split('-').map(Number);
+      income.incomeMonth = new Date(year, month - 1, day);
     }
 
     const updatedIncome = await this.commonService.saveEntity(

@@ -2,7 +2,6 @@ import {
   Column,
   CreateDateColumn,
   Entity,
-  ManyToMany,
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
@@ -10,9 +9,7 @@ import {
 } from 'typeorm';
 import { ICreditCard } from '../interfaces/credit-card.interface';
 import { Banks } from 'src/bank-accounts/enums/banks.enum';
-import { InstallmentEntity } from './installment.entity';
 import { InvoiceEntity } from './invoice.entity';
-import { IExpense } from 'src/expenses/interfaces/expense.interface';
 import { ExpenseEntity } from 'src/expenses/entities/expense.entity';
 import { SubscriptionEntity } from './subscription.entity';
 
@@ -39,9 +36,6 @@ export class CreditCardEntity implements ICreditCard {
   @Column({ name: 'user_id' })
   public userId: number;
 
-  @OneToMany(() => InstallmentEntity, (installment) => installment.creditCard)
-  public installments?: InstallmentEntity[];
-
   @OneToMany(() => InvoiceEntity, (invoice) => invoice.creditCard)
   public invoices?: InvoiceEntity[];
 
@@ -51,7 +45,7 @@ export class CreditCardEntity implements ICreditCard {
   )
   public subscriptions?: SubscriptionEntity[];
 
-  @ManyToOne(() => ExpenseEntity, (expense) => expense.creditCard)
+  @OneToMany(() => ExpenseEntity, (expense) => expense.creditCard)
   public expenses?: ExpenseEntity[];
 
   @CreateDateColumn({ name: 'created_at' })

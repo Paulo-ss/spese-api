@@ -10,7 +10,10 @@ export class CreateCreditCardDto {
   })
   public bank: Banks;
 
-  @IsNumber()
+  @IsNumber(
+    { maxDecimalPlaces: 2 },
+    { message: 'Digite um valor em R$ válido. Ex: 11.99' },
+  )
   public limit: number;
 
   @IsNumber()

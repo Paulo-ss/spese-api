@@ -1,15 +1,13 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ExpenseEntity } from './entities/expense.entity';
 import { Repository } from 'typeorm';
 import { CommonService } from 'src/common/common.service';
 import { FindExpensesFiltersDto } from './dto/find-expenses-filters.dto';
 import { CreateExpenseDto } from './dto/create-expense.dto';
-import { InstallmentService } from 'src/credit-cards/installment.service';
 import { InvoiceService } from 'src/credit-cards/invoice.service';
 import { BankAccountsService } from 'src/bank-accounts/bank-accounts.service';
 import { CreditCardsService } from 'src/credit-cards/credit-cards.service';
-import { CreditCardEntity } from 'src/credit-cards/entities/credit-card.entity';
 import { BankAccountEntity } from 'src/bank-accounts/entities/bank.entity';
 import { InvoiceEntity } from 'src/credit-cards/entities/invoice.entity';
 import { isNull, isUndefined } from 'src/common/utils/validation.utils';
@@ -23,10 +21,10 @@ export class ExpensesService {
   constructor(
     @InjectRepository(ExpenseEntity)
     private readonly expensesRepository: Repository<ExpenseEntity>,
-    @Inject() private readonly installmentService: InstallmentService,
-    @Inject() private readonly invoiceService: InvoiceService,
-    @Inject() private readonly bankAccountService: BankAccountsService,
-    @Inject() private readonly creditCardService: CreditCardsService,
+    @Inject(forwardRef(() => InvoiceService))
+    private readonly invoiceService: InvoiceService,
+    private readonly bankAccountService: BankAccountsService,
+    private readonly creditCardService: CreditCardsService,
     private readonly commonService: CommonService,
   ) {}
 
@@ -100,12 +98,11 @@ export class ExpensesService {
 
   public async create(
     createExpenseDto: CreateExpenseDto,
-  ): Promise<ExpenseEntity> {
+  ): Promise<ExpenseEntity | IGenericMessageResponse> {
     const {
       expenseType,
       name,
       price,
-      status,
       userId,
       bankAccountId,
       category,
@@ -129,14 +126,14 @@ export class ExpensesService {
     const invoices: InvoiceEntity[] = [];
 
     if (creditCard) {
-      const expenseYear = expenseDate.getFullYear();
-      const expenseMonth = expenseDate.getMonth();
+      const expenseMonth = new Date(expenseDate).getMonth();
 
       invoice = await this.invoiceService.findByMonthAndCreditCard(
         creditCardId,
         creditCard.closingDay,
-        expenseDate,
+        new Date(expenseDate),
       );
+
       if (isNull(invoice) || isUndefined(invoice)) {
         const currentMonth = new Date().getMonth();
         const invoiceStatus =
@@ -147,7 +144,7 @@ export class ExpensesService {
         invoice = await this.invoiceService.create({
           creditCard,
           currentPrice: price,
-          invoiceDate: new Date(expenseYear, expenseMonth),
+          invoiceDate: new Date(expenseDate),
           status: invoiceStatus,
         });
       } else {
@@ -197,30 +194,49 @@ export class ExpensesService {
 
           invoices.push(installmentInvoice);
         }
+
+        const expenses: ExpenseEntity[] = [];
+        for (let i = 1; i <= installments; i++) {
+          expenses.push(
+            this.expensesRepository.create({
+              expenseType,
+              status: ExpenseStatus.PENDING,
+              name,
+              price,
+              bankAccount,
+              creditCard,
+              category,
+              invoice: invoices[i - 1],
+              installmentNumber: i,
+              userId,
+              expenseDate: new Date(expenseDate),
+            }),
+          );
+        }
+
+        await this.commonService.saveMultipleEntities(
+          this.expensesRepository,
+          expenses,
+        );
+
+        return this.commonService.generateGenericMessageResponse(
+          `Despesa criada com sucesso em ${installments} parcelas.`,
+        );
       }
     }
 
     const expense = this.expensesRepository.create({
       expenseType,
-      status,
+      status: ExpenseStatus.PENDING,
       name,
       price,
       bankAccount,
       creditCard,
       category,
-      installments,
-      invoice,
+      invoice: invoices[0],
+      userId,
+      expenseDate: new Date(expenseDate),
     });
-
-    if (installments) {
-      const newInstallments: CreateInstallmentDto[] = [];
-
-      for (let i = 1; i <= installments; i++) {
-        newInstallments.push({ creditCard, expense, invoice: invoices[i - 1] });
-      }
-
-      await this.installmentService.create(newInstallments);
-    }
 
     await this.commonService.saveEntity(this.expensesRepository, expense);
 

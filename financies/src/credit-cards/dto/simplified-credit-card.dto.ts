@@ -2,11 +2,14 @@ import { Banks } from 'src/bank-accounts/enums/banks.enum';
 import { SimplifiedCreditCardInterface } from '../interfaces/simplified-credit-card.interface';
 import { CreditCardEntity } from '../entities/credit-card.entity';
 import { InvoiceStatus } from '../enums/invoice-status.enum';
+import { getNextBusinessDay } from '../utils/get-next-business-day.util';
+import { getInvoiceMonth } from '../utils/get-invoice-month.util';
 
 export class SimplifiedCreditCardDto implements SimplifiedCreditCardInterface {
   public id: number;
   public bank: Banks;
-  public dueDay: number;
+  public closingDate: Date;
+  public dueDate: Date;
   public currentMonthInvoiceTotal: number;
   public otherMonthsTotal: number;
   public closedTotal: number;
@@ -23,9 +26,9 @@ export class SimplifiedCreditCardDto implements SimplifiedCreditCardInterface {
           return (total += subscription.price);
         }, 0)
       : null;
-    const currentMonthInvoiceTotal = creditCard.invoices.find(
+    const currentInvoice = creditCard.invoices.find(
       (invoice) => invoice.status === InvoiceStatus.OPENED_CURRENT,
-    ).currentPrice;
+    );
     const otherMonthsTotal = creditCard.invoices.reduce((total, invoice) => {
       if (invoice.status === InvoiceStatus.OPENED_FUTURE) {
         return total + invoice.currentPrice;
@@ -41,13 +44,30 @@ export class SimplifiedCreditCardDto implements SimplifiedCreditCardInterface {
       return total;
     }, 0);
 
+    let currentMonthInvoiceTotal = currentInvoice?.currentPrice ?? 0;
+    if (subscriptionsTotal) {
+      currentMonthInvoiceTotal += subscriptionsTotal;
+    }
+
+    let closingDate = currentInvoice ? currentInvoice.closingDate : null;
+    let dueDate = currentInvoice ? currentInvoice.dueDate : null;
+
+    if (!closingDate && !dueDate) {
+      const { month, year } = getInvoiceMonth(
+        creditCard.closingDay,
+        new Date(),
+      );
+      closingDate = new Date(year, month, creditCard.closingDay);
+
+      dueDate = getNextBusinessDay(new Date(year, month, creditCard.dueDay));
+    }
+
     return new SimplifiedCreditCardDto({
       id: creditCard.id,
       bank: creditCard.bank,
-      dueDay: creditCard.dueDay,
-      currentMonthInvoiceTotal: subscriptionsTotal
-        ? subscriptionsTotal + currentMonthInvoiceTotal
-        : currentMonthInvoiceTotal,
+      closingDate,
+      dueDate,
+      currentMonthInvoiceTotal,
       otherMonthsTotal,
       closedTotal,
       limit: creditCard.limit,
