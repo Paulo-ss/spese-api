@@ -10,4 +10,5 @@ export enum ExpenseCategory {
   PETS = 'PETS',
   UBER = 'UBER',
   INVESTIMENT = 'INVESTIMENTO',
+  GYM = 'ACADEMIA',
 }

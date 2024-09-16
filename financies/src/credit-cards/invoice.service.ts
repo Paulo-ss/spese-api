@@ -1,4 +1,9 @@
-import { Inject, Injectable, forwardRef } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  forwardRef,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InvoiceEntity } from './entities/invoice.entity';
 import { Repository } from 'typeorm';
@@ -9,6 +14,7 @@ import { InvoiceStatus } from './enums/invoice-status.enum';
 import { getNextBusinessDay } from './utils/get-next-business-day.util';
 import { getInvoiceMonth } from './utils/get-invoice-month.util';
 import { ExpensesService } from 'src/expenses/expenses.service';
+import { isNull, isUndefined } from 'src/common/utils/validation.utils';
 
 @Injectable()
 export class InvoiceService {
@@ -23,7 +29,7 @@ export class InvoiceService {
   public async findById(id: number): Promise<InvoiceEntity> {
     const invoice = await this.invoiceRepository.findOne({
       where: { id },
-      relations: { expenses: true },
+      relations: { expenses: true, creditCard: true },
     });
     this.commonService.checkEntityExistence(invoice, 'Fatura');
 
@@ -97,6 +103,15 @@ export class InvoiceService {
 
   public async updatePrice(id: number, price: number): Promise<InvoiceEntity> {
     const invoice = await this.findById(id);
+
+    if (invoice.status === InvoiceStatus.CLOSED) {
+      throw new BadRequestException('Essa fatura já está fechada.');
+    }
+
+    if (invoice.status === InvoiceStatus.PAID) {
+      throw new BadRequestException('Essa fatura já está paga.');
+    }
+
     invoice.currentPrice = price;
 
     await this.commonService.saveEntity(this.invoiceRepository, invoice);
@@ -105,15 +120,35 @@ export class InvoiceService {
   }
 
   public async payInvoice(invoiceId: number): Promise<IGenericMessageResponse> {
-    await this.invoiceRepository.save({
-      id: invoiceId,
-      status: InvoiceStatus.PAID,
-    });
+    const invoiceToBePaid = await this.findById(invoiceId);
+    invoiceToBePaid.status = InvoiceStatus.PAID;
 
-    const invoice = await this.findById(invoiceId);
-    invoice.expenses.forEach(async (expense) => {
+    await this.commonService.saveEntity(
+      this.invoiceRepository,
+      invoiceToBePaid,
+    );
+
+    invoiceToBePaid.expenses.forEach(async (expense) => {
       await this.expenseService.payExpense(expense.id);
     });
+
+    const nextMonthInvoiceDate = new Date(invoiceToBePaid.closingDate);
+    nextMonthInvoiceDate.setMonth(nextMonthInvoiceDate.getMonth() + 1);
+    nextMonthInvoiceDate.setDate(nextMonthInvoiceDate.getDate() - 1);
+
+    const nextMonthInvoice = await this.findByMonthAndCreditCard(
+      invoiceToBePaid.creditCard.id,
+      invoiceToBePaid.creditCard.closingDay,
+      nextMonthInvoiceDate,
+    );
+
+    if (!isNull(nextMonthInvoice) && !isUndefined(nextMonthInvoice)) {
+      nextMonthInvoice.status = InvoiceStatus.OPENED_CURRENT;
+      await this.commonService.saveEntity(
+        this.invoiceRepository,
+        nextMonthInvoice,
+      );
+    }
 
     return this.commonService.generateGenericMessageResponse('Fatura paga!');
   }

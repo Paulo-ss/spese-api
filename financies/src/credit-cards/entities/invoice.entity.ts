@@ -17,7 +17,7 @@ export class InvoiceEntity implements IInvoice {
   @PrimaryGeneratedColumn()
   public id: number;
 
-  @Column({ name: 'current_price' })
+  @Column('decimal', { name: 'current_price', precision: 10, scale: 2 })
   public currentPrice: number;
 
   @Column('date', { name: 'closing_date' })

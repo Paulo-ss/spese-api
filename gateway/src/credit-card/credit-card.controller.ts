@@ -14,11 +14,19 @@ import { CurrentUser } from 'src/decorators/current-user.decorator';
 import { CreateCreditCardDto } from './dto/create-credit-card.dto';
 import { UpdateCreditCardDto } from './dto/update-credit-card.dto';
 import { IsAuthenticatedGuard } from 'src/guards/is-authenticated.guard';
+import { InvoiceService } from './invoice.service';
+import { SubscriptionService } from './subscription.service';
+import { CreateSubscriptionDto } from './dto/create-subscription.dto';
+import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
 
 @UseGuards(IsAuthenticatedGuard)
 @Controller('credit-card')
 export class CreditCardController {
-  constructor(private readonly creditCardService: CreditCardService) {}
+  constructor(
+    private readonly creditCardService: CreditCardService,
+    private readonly invoiceService: InvoiceService,
+    private readonly subscriptionService: SubscriptionService,
+  ) {}
 
   @Get(':id')
   public async findCreditCardById(
@@ -56,5 +64,42 @@ export class CreditCardController {
     @CurrentUser() userId: number,
   ) {
     return this.creditCardService.deleteCreditCard(id, userId);
+  }
+
+  @Get('invoice/:id')
+  public async getInvoiceById(@Param('id', ParseIntPipe) id: number) {
+    return this.invoiceService.findById(id);
+  }
+
+  @Put('invoice/pay/:id')
+  public async payInvoice(@Param('id', ParseIntPipe) id: number) {
+    return this.invoiceService.payInvoice(id);
+  }
+
+  @Get('subscription/:id')
+  public async getSubscriptionById(@Param('id', ParseIntPipe) id: number) {
+    return this.subscriptionService.findById(id);
+  }
+
+  @Post('subscription')
+  public async createSubscription(
+    @Body() subscription: CreateSubscriptionDto,
+    @CurrentUser() userId: number,
+  ) {
+    return this.subscriptionService.create(subscription, userId);
+  }
+
+  @Put('subscription/:id')
+  public async updateSubscription(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() subscription: UpdateSubscriptionDto,
+    @CurrentUser() userId: number,
+  ) {
+    return this.subscriptionService.update(id, subscription, userId);
+  }
+
+  @Delete('subscription/:id')
+  public async deleteSubscription(@Param('id', ParseIntPipe) id: number) {
+    return this.subscriptionService.delete(id);
   }
 }

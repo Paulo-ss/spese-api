@@ -23,7 +23,7 @@ export class SimplifiedCreditCardDto implements SimplifiedCreditCardInterface {
   public static entityToDto(creditCard: CreditCardEntity) {
     const subscriptionsTotal = creditCard.subscriptions
       ? creditCard.subscriptions.reduce((total, subscription) => {
-          return (total += subscription.price);
+          return total + Number(subscription.price);
         }, 0)
       : null;
     const currentInvoice = creditCard.invoices.find(
@@ -31,20 +31,20 @@ export class SimplifiedCreditCardDto implements SimplifiedCreditCardInterface {
     );
     const otherMonthsTotal = creditCard.invoices.reduce((total, invoice) => {
       if (invoice.status === InvoiceStatus.OPENED_FUTURE) {
-        return total + invoice.currentPrice;
+        return total + Number(invoice.currentPrice);
       }
 
       return total;
     }, 0);
     const closedTotal = creditCard.invoices.reduce((total, invoice) => {
       if (invoice.status === InvoiceStatus.CLOSED) {
-        return total + invoice.currentPrice;
+        return total + Number(invoice.currentPrice);
       }
 
       return total;
     }, 0);
 
-    let currentMonthInvoiceTotal = currentInvoice?.currentPrice ?? 0;
+    let currentMonthInvoiceTotal = Number(currentInvoice?.currentPrice) ?? 0;
     if (subscriptionsTotal) {
       currentMonthInvoiceTotal += subscriptionsTotal;
     }

@@ -44,19 +44,24 @@ export class ExpensesService {
   public async findByFilters(
     filters: FindExpensesFiltersDto,
   ): Promise<ExpenseEntity[]> {
-    const [fromMonth, fromYear] = filters.toMonth.split('-').map(Number);
-    const fromDate = new Date(fromYear, fromMonth);
+    const [fromMonth, fromYear] = filters.fromMonth.split('-').map(Number);
+    const fromDate = new Date(fromYear, fromMonth - 1);
+    const nextMonthDate = new Date(fromDate);
+    nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
 
     const query = this.expensesRepository
       .createQueryBuilder('e')
-      .leftJoinAndSelect('e.bank_account', 'ba')
-      .leftJoinAndSelect('e.credit_card', 'cc')
-      .where('e.created_at = :fromMonth', { fromMonth: fromDate });
+      .leftJoinAndSelect('e.bankAccount', 'ba')
+      .leftJoin('e.creditCard', 'cc')
+      .where('e.expense_date between :fromMonth and :nextMonth', {
+        fromMonth: fromDate,
+        nextMonth: nextMonthDate,
+      });
 
     if (filters.toMonth) {
-      const [toMonth, toYear] = filters.fromMonth.split('-').map(Number);
+      const [toMonth, toYear] = filters.toMonth.split('-').map(Number);
 
-      query.where('e.created_at between :fromMonth and :toMonth', {
+      query.where('e.expense_date between :fromMonth and :toMonth', {
         fromMonth: fromDate,
         toMonth: new Date(toYear, toMonth),
       });
@@ -69,7 +74,7 @@ export class ExpensesService {
     }
 
     if (filters.name) {
-      query.andWhere('e.name like :name', {
+      query.andWhere('UPPER(e.name) like :name', {
         name: `%${filters.name.toUpperCase()}%`,
       });
     }
@@ -153,7 +158,7 @@ export class ExpensesService {
 
         invoice = await this.invoiceService.updatePrice(
           id,
-          currentPrice + price,
+          parseFloat(String(currentPrice)) + price,
         );
       }
 
@@ -162,14 +167,14 @@ export class ExpensesService {
       if (installments) {
         for (let i = 1; i <= installments - 1; i++) {
           const previousInvoice = invoices[i - 1];
-          const nextInvoiceDate = previousInvoice.closingDate;
+          const nextInvoiceDate = new Date(previousInvoice.closingDate);
           nextInvoiceDate.setMonth(nextInvoiceDate.getMonth() + 1);
 
           let installmentInvoice =
             await this.invoiceService.findByMonthAndCreditCard(
               creditCardId,
               creditCard.closingDay,
-              nextInvoiceDate,
+              new Date(previousInvoice.closingDate),
             );
 
           if (isNull(installmentInvoice) || isUndefined(installmentInvoice)) {
@@ -188,7 +193,7 @@ export class ExpensesService {
 
             installmentInvoice = await this.invoiceService.updatePrice(
               id,
-              currentPrice + price,
+              parseFloat(String(currentPrice)) + price,
             );
           }
 
@@ -197,6 +202,11 @@ export class ExpensesService {
 
         const expenses: ExpenseEntity[] = [];
         for (let i = 1; i <= installments; i++) {
+          const nextMonthExpenseDate = new Date(expenseDate);
+          nextMonthExpenseDate.setMonth(
+            nextMonthExpenseDate.getMonth() + (i - 1),
+          );
+
           expenses.push(
             this.expensesRepository.create({
               expenseType,
@@ -209,7 +219,8 @@ export class ExpensesService {
               invoice: invoices[i - 1],
               installmentNumber: i,
               userId,
-              expenseDate: new Date(expenseDate),
+              expenseDate:
+                i === 1 ? new Date(expenseDate) : nextMonthExpenseDate,
             }),
           );
         }

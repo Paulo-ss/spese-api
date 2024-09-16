@@ -28,7 +28,7 @@ export class ExpenseEntity implements IExpense {
   @ManyToOne(() => CreditCardEntity, (creditCard) => creditCard.expenses)
   public creditCard?: ICreditCard;
 
-  @Column({ name: 'expense_type', enum: ExpenseType })
+  @Column('enum', { name: 'expense_type', enum: ExpenseType })
   public expenseType: ExpenseType;
 
   @ManyToOne(() => InvoiceEntity, (invoice) => invoice.expenses)
@@ -43,7 +43,7 @@ export class ExpenseEntity implements IExpense {
   @Column('decimal', { name: 'price', precision: 10, scale: 2 })
   public price: number;
 
-  @Column({ name: 'status', enum: ExpenseStatus })
+  @Column('enum', { name: 'status', enum: ExpenseStatus })
   public status: ExpenseStatus;
 
   @Column('enum', { name: 'category', enum: ExpenseCategory, nullable: true })

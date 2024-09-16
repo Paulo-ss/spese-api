@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { CreditCardService } from './credit-card.service';
 import { CreditCardController } from './credit-card.controller';
 import { ClientsModule, Transport } from '@nestjs/microservices';
+import { SubscriptionService } from './subscription.service';
+import { InvoiceService } from './invoice.service';
 
 @Module({
   imports: [
@@ -14,6 +16,6 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
     ]),
   ],
   controllers: [CreditCardController],
-  providers: [CreditCardService],
+  providers: [CreditCardService, SubscriptionService, InvoiceService],
 })
 export class CreditCardModule {}

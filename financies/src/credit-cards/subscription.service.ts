@@ -17,21 +17,11 @@ export class SubscriptionService {
     private readonly commonService: CommonService,
   ) {}
 
-  private async findById(id: number): Promise<SubscriptionEntity> {
+  public async findById(id: number): Promise<SubscriptionEntity> {
     const subscription = await this.subscriptionRepository.findOneBy({ id });
     this.commonService.checkEntityExistence(subscription, 'Assinatura');
 
     return subscription;
-  }
-
-  public async findByCreditCard(
-    creditCardId: number,
-  ): Promise<SubscriptionEntity[]> {
-    const subscriptions = await this.subscriptionRepository.findBy({
-      creditCard: { id: creditCardId },
-    });
-
-    return subscriptions;
   }
 
   public async create(
