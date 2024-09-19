@@ -14,6 +14,9 @@ import { BankAccountEntity } from './bank-accounts/entities/bank.entity';
 import { CreditCardEntity } from './credit-cards/entities/credit-card.entity';
 import { InvoiceEntity } from './credit-cards/entities/invoice.entity';
 import { SubscriptionEntity } from './credit-cards/entities/subscription.entity';
+import { ScheduleModule } from '@nestjs/schedule';
+import { TasksModule } from './tasks/tasks.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
@@ -35,11 +38,14 @@ import { SubscriptionEntity } from './credit-cards/entities/subscription.entity'
       ],
       synchronize: true,
     }),
+    ScheduleModule.forRoot(),
     CreditCardsModule,
     BankAccountsModule,
     ExpensesModule,
     IncomeModule,
     CommonModule,
+    TasksModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

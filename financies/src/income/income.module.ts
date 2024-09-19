@@ -10,5 +10,6 @@ import { WageService } from './wage.service';
   imports: [TypeOrmModule.forFeature([IncomeEntity, WageEntity])],
   controllers: [IncomeController],
   providers: [IncomeService, WageService],
+  exports: [IncomeService, WageService],
 })
 export class IncomeModule {}

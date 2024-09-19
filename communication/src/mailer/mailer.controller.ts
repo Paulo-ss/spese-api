@@ -1,8 +1,9 @@
-import { Controller } from '@nestjs/common';
+import { Controller, UsePipes, ValidationPipe } from '@nestjs/common';
 import { MailerService } from './mailer.service';
-import { EventPattern, MessagePattern } from '@nestjs/microservices';
+import { EventPattern } from '@nestjs/microservices';
 import { SendEmailDto } from './dto/send-emai.dto';
 
+@UsePipes(new ValidationPipe())
 @Controller()
 export class MailerController {
   constructor(private readonly mailerService: MailerService) {}

@@ -15,6 +15,8 @@ import { getNextBusinessDay } from './utils/get-next-business-day.util';
 import { getInvoiceMonth } from './utils/get-invoice-month.util';
 import { ExpensesService } from 'src/expenses/expenses.service';
 import { isNull, isUndefined } from 'src/common/utils/validation.utils';
+import { CreditCardEntity } from './entities/credit-card.entity';
+import { ClosedInvoicesDto } from './dto/closed-invoices.dto';
 
 @Injectable()
 export class InvoiceService {
@@ -151,5 +153,60 @@ export class InvoiceService {
     }
 
     return this.commonService.generateGenericMessageResponse('Fatura paga!');
+  }
+
+  public async closeInvoices(): Promise<ClosedInvoicesDto[]> {
+    const today = new Date().toISOString().split('T')[0];
+
+    const invoicesToBeClosed = await this.invoiceRepository
+      .createQueryBuilder('in')
+      .leftJoinAndSelect('in.creditCard', 'cc')
+      .where('in.closing_date = :today', { today: today })
+      .andWhere('in.status != :closed', {
+        closed: InvoiceStatus.CLOSED,
+      })
+      .andWhere('in.status != :paid', {
+        paid: InvoiceStatus.PAID,
+      })
+      .getMany();
+
+    if (invoicesToBeClosed.length > 0) {
+      invoicesToBeClosed.forEach(async (invoice) => {
+        invoice.status = InvoiceStatus.CLOSED;
+      });
+
+      await this.commonService.saveMultipleEntities(
+        this.invoiceRepository,
+        invoicesToBeClosed,
+      );
+    }
+
+    return invoicesToBeClosed.map(ClosedInvoicesDto.entityToDto);
+  }
+
+  public async markInvoicesAsDelayed(): Promise<ClosedInvoicesDto[]> {
+    const today = new Date().toISOString().split('T')[0];
+
+    const delayedInvoices = await this.invoiceRepository
+      .createQueryBuilder('in')
+      .leftJoinAndSelect('in.creditCard', 'cc')
+      .where('in.due_date < :today', { today: today })
+      .andWhere('in.status = :closed', {
+        closed: InvoiceStatus.CLOSED,
+      })
+      .getMany();
+
+    if (delayedInvoices.length > 0) {
+      delayedInvoices.forEach(async (invoice) => {
+        invoice.status = InvoiceStatus.DELAYED;
+      });
+
+      await this.commonService.saveMultipleEntities(
+        this.invoiceRepository,
+        delayedInvoices,
+      );
+    }
+
+    return delayedInvoices.map(ClosedInvoicesDto.entityToDto);
   }
 }

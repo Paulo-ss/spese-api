@@ -31,8 +31,6 @@ export class AuthController {
   public async confirmEmail(
     confirmationToken: string,
   ): Promise<IGenericMessageResponse> {
-    console.log({ confirmationToken });
-
     return this.authService.confirmEmail(confirmationToken);
   }
 
