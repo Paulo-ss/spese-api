@@ -60,10 +60,13 @@ export class AnalyticsService {
     let monthPaidExpensesTotal = 0;
     let monthExpensesTotal = 0;
 
-    const monthExpenses = await this.expensesService.findByFilters({
-      fromMonth: month,
-      userId,
-    });
+    const monthExpenses = await this.expensesService.findByFilters(
+      {
+        fromMonth: month,
+        userId,
+      },
+      true,
+    );
     if (
       !isNull(monthExpenses) &&
       !isUndefined(monthExpenses) &&
@@ -78,10 +81,19 @@ export class AnalyticsService {
       });
     }
 
-    const { invoicesTotal, paidInvoicesTotal } =
+    const { invoicesTotal, paidInvoicesTotal, creditCardSubscriptionTotal } =
       await this.creditCardService.getUsersMonthCreditCardTotal(userId, month);
-    monthExpensesTotal += invoicesTotal;
-    monthPaidExpensesTotal += paidInvoicesTotal;
+    if (invoicesTotal) {
+      monthExpensesTotal += invoicesTotal;
+    }
+
+    if (paidInvoicesTotal) {
+      monthPaidExpensesTotal += paidInvoicesTotal;
+    }
+
+    if (creditCardSubscriptionTotal) {
+      monthExpensesTotal += creditCardSubscriptionTotal;
+    }
 
     const usersMonthTotalIncome =
       await this.incomeService.getUsersMonthTotalIncome(userId, month);
@@ -147,6 +159,7 @@ export class AnalyticsService {
     const mappedMonthsSummaries = new Map<string, IMonthSummary>();
     for (const monthRange of monthsRange) {
       const summary = await this.getMonthSummary(monthRange, filters.userId);
+
       mappedMonthsSummaries.set(monthRange, summary);
     }
 

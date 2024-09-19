@@ -43,6 +43,7 @@ export class ExpensesService {
 
   public async findByFilters(
     filters: FindExpensesFiltersDto,
+    ignoreCreditCard = false,
   ): Promise<ExpenseEntity[]> {
     const [fromMonth, fromYear] = filters.fromMonth.split('-').map(Number);
     const fromDate = new Date(fromYear, fromMonth - 1);
@@ -82,6 +83,10 @@ export class ExpensesService {
       query.andWhere('cc.id = :creditCardId', {
         creditCardId: filters.creditCardId,
       });
+    }
+
+    if (ignoreCreditCard) {
+      query.andWhere('e.creditCard is null');
     }
 
     if (filters.priceRange) {
@@ -203,10 +208,7 @@ export class ExpensesService {
 
         const expenses: ExpenseEntity[] = [];
         for (let i = 1; i <= installments; i++) {
-          const nextMonthExpenseDate = new Date(expenseDate);
-          nextMonthExpenseDate.setMonth(
-            nextMonthExpenseDate.getMonth() + (i - 1),
-          );
+          const invoiceDate = new Date(invoices[i - 1].closingDate);
 
           expenses.push(
             this.expensesRepository.create({
@@ -220,8 +222,7 @@ export class ExpensesService {
               invoice: invoices[i - 1],
               installmentNumber: i,
               userId,
-              expenseDate:
-                i === 1 ? new Date(expenseDate) : nextMonthExpenseDate,
+              expenseDate: invoiceDate,
             }),
           );
         }

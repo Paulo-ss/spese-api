@@ -1,4 +1,4 @@
-import { Body, Controller, Get } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
 import { IMonthSummary } from './interfaces/month-summary.interface';
 import {
@@ -7,12 +7,14 @@ import {
 } from './interfaces/reports-responses.interface';
 import { ReportFiltersDto } from './dto/report-filters.dto';
 import { CurrentUser } from 'src/decorators/current-user.decorator';
+import { IsAuthenticatedGuard } from 'src/guards/is-authenticated.guard';
 
+@UseGuards(IsAuthenticatedGuard)
 @Controller('analytics')
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 
-  @Get('month-summary')
+  @Post('month-summary')
   public async getMonthSummary(
     @CurrentUser() userId: number,
     @Body() { month }: { month: string },
@@ -20,7 +22,7 @@ export class AnalyticsController {
     return this.analyticsService.getMonthSummary({ month, userId });
   }
 
-  @Get('reports/expenses-x-category')
+  @Post('reports/expenses-x-category')
   public async getExpensesXCategoryReport(
     @Body() filters: ReportFiltersDto,
     @CurrentUser() userId: number,
@@ -28,7 +30,7 @@ export class AnalyticsController {
     return this.analyticsService.getExpensesXCategoryReport(filters, userId);
   }
 
-  @Get('reports/expenses-x-balances')
+  @Post('reports/expenses-x-balances')
   public async getExpensesXBalanceReport(
     @Body() filters: ReportFiltersDto,
     @CurrentUser() userId: number,
@@ -36,7 +38,7 @@ export class AnalyticsController {
     return this.analyticsService.getExpensesXBalanceReport(filters, userId);
   }
 
-  @Get('reports/expenses-x-credit-cards')
+  @Post('reports/expenses-x-credit-cards')
   public async getExpensesXCreditCardsReport(
     @Body() filters: ReportFiltersDto,
     @CurrentUser() userId: number,
@@ -44,7 +46,7 @@ export class AnalyticsController {
     return this.analyticsService.getExpensesXCreditCardsReport(filters, userId);
   }
 
-  @Get('reports/investiments-x-month')
+  @Post('reports/investiments-x-month')
   public async getInvestimentsXMonthReport(
     @Body() filters: ReportFiltersDto,
     @CurrentUser() userId: number,

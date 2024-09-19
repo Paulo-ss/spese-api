@@ -72,6 +72,13 @@ export class InvoiceService {
     invoiceClosingDate.setDate(closingDay);
 
     const invoiceDueDate = getNextBusinessDay(new Date(year, month));
+
+    // If the due day is smaller than the closing day, that means
+    // that the invoice due day is on the next month
+    if (dueDay < closingDay) {
+      invoiceDueDate.setMonth(invoiceDueDate.getMonth() + 1);
+    }
+
     invoiceDueDate.setDate(dueDay);
 
     const invoice = this.invoiceRepository.create({

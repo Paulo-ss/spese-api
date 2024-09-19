@@ -43,7 +43,11 @@ export class CreditCardsService {
   public async getUsersMonthCreditCardTotal(
     userId: number,
     selectedMonth: string,
-  ): Promise<{ paidInvoicesTotal: number; invoicesTotal: number }> {
+  ): Promise<{
+    paidInvoicesTotal: number;
+    invoicesTotal: number;
+    creditCardSubscriptionTotal?: number;
+  }> {
     const creditCards = await this.creditCardRepository
       .createQueryBuilder('cc')
       .leftJoinAndSelect('cc.invoices', 'in')
@@ -69,7 +73,7 @@ export class CreditCardsService {
       if (
         !isNull(creditCard.subscriptions) &&
         !isUndefined(creditCard.subscriptions) &&
-        !isEmpty(creditCard.subscriptions)
+        creditCard.subscriptions.length > 0
       ) {
         for (const subscription of creditCard.subscriptions) {
           creditCardSubscriptionTotal += Number(subscription.price);
@@ -79,7 +83,7 @@ export class CreditCardsService {
       if (
         !isNull(creditCard.invoices) &&
         !isUndefined(creditCard.invoices) &&
-        !isEmpty(creditCard.invoices)
+        creditCard.invoices.length > 0
       ) {
         firstDayOfTheMonth.setDate(creditCard.closingDay);
         const monthInvoice = creditCard.invoices.find((invoice) => {
@@ -91,7 +95,7 @@ export class CreditCardsService {
           }
         });
 
-        if (monthInvoice.status === InvoiceStatus.PAID) {
+        if (monthInvoice?.status === InvoiceStatus.PAID) {
           paidInvoicesTotal +=
             Number(monthInvoice.currentPrice) + creditCardSubscriptionTotal;
           invoicesTotal += Number(monthInvoice.currentPrice);
@@ -99,13 +103,14 @@ export class CreditCardsService {
           continue;
         }
 
-        invoicesTotal +=
-          Number(monthInvoice.currentPrice) + creditCardSubscriptionTotal;
+        invoicesTotal += monthInvoice?.currentPrice
+          ? Number(monthInvoice.currentPrice) + creditCardSubscriptionTotal
+          : creditCardSubscriptionTotal;
         creditCardSubscriptionTotal = 0;
       }
     }
 
-    return { paidInvoicesTotal, invoicesTotal };
+    return { paidInvoicesTotal, invoicesTotal, creditCardSubscriptionTotal };
   }
 
   public async findByUserId(userId: number): Promise<CreditCardEntity[]> {
