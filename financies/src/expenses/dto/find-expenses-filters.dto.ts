@@ -35,4 +35,7 @@ export class FindExpensesFiltersDto {
   @IsOptional()
   @IsNumber()
   public creditCardId?: number;
+
+  @IsNumber()
+  public userId: number;
 }

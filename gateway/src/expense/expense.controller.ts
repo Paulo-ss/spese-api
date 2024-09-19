@@ -28,8 +28,11 @@ export class ExpenseController {
   }
 
   @Post('filter')
-  public async getByFilters(@Body() dto: FindExpensesFiltersDto) {
-    return this.expenseService.getByFilters(dto);
+  public async getByFilters(
+    @Body() dto: FindExpensesFiltersDto,
+    @CurrentUser() userId: number,
+  ) {
+    return this.expenseService.getByFilters(dto, userId);
   }
 
   @Post()

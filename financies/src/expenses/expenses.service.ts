@@ -46,8 +46,7 @@ export class ExpensesService {
   ): Promise<ExpenseEntity[]> {
     const [fromMonth, fromYear] = filters.fromMonth.split('-').map(Number);
     const fromDate = new Date(fromYear, fromMonth - 1);
-    const nextMonthDate = new Date(fromDate);
-    nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
+    const lastDayOfTheMonth = new Date(fromYear, fromMonth, 0);
 
     const query = this.expensesRepository
       .createQueryBuilder('e')
@@ -55,7 +54,7 @@ export class ExpensesService {
       .leftJoin('e.creditCard', 'cc')
       .where('e.expense_date between :fromMonth and :nextMonth', {
         fromMonth: fromDate,
-        nextMonth: nextMonthDate,
+        nextMonth: lastDayOfTheMonth,
       });
 
     if (filters.toMonth) {
@@ -98,7 +97,9 @@ export class ExpensesService {
       query.andWhere('e.status = :status', { status: filters.status });
     }
 
-    return query.getMany();
+    return query
+      .andWhere('e.user_id = :userId', { userId: filters.userId })
+      .getMany();
   }
 
   public async create(

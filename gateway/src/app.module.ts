@@ -8,9 +8,10 @@ import { BankAccountModule } from './bank-account/bank-account.module';
 import { IncomeModule } from './income/income.module';
 import { CreditCardModule } from './credit-card/credit-card.module';
 import { ExpenseModule } from './expense/expense.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
-  imports: [UsersModule, AuthModule, BankAccountModule, IncomeModule, CreditCardModule, ExpenseModule],
+  imports: [UsersModule, AuthModule, BankAccountModule, IncomeModule, CreditCardModule, ExpenseModule, AnalyticsModule],
   controllers: [AppController, UsersController],
   providers: [AppService],
 })

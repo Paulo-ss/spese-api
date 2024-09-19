@@ -15,7 +15,6 @@ import { getNextBusinessDay } from './utils/get-next-business-day.util';
 import { getInvoiceMonth } from './utils/get-invoice-month.util';
 import { ExpensesService } from 'src/expenses/expenses.service';
 import { isNull, isUndefined } from 'src/common/utils/validation.utils';
-import { CreditCardEntity } from './entities/credit-card.entity';
 import { ClosedInvoicesDto } from './dto/closed-invoices.dto';
 
 @Injectable()

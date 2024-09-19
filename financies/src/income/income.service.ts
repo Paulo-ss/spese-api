@@ -7,6 +7,7 @@ import { CreateIncomeDto } from './dto/create-income.dto';
 import { UpdateIncomeDto } from './dto/update-income.dto';
 import { isNull, isUndefined } from 'src/common/utils/validation.utils';
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
+import { isEmpty } from 'class-validator';
 
 @Injectable()
 export class IncomeService {
@@ -29,16 +30,34 @@ export class IncomeService {
     return income;
   }
 
-  public async findMultipleByUserIdAndMonth(
+  public async getUsersMonthTotalIncome(
     userId: number,
     incomeDate: string,
-  ): Promise<IncomeEntity[]> {
+  ): Promise<number> {
     const [month, year] = incomeDate.split('-').map(Number);
+    const firstDayOfTheMonth = new Date(year, month - 1)
+      .toISOString()
+      .split('T')[0];
+    const lastDayOfTheMonth = new Date(year, month, 0)
+      .toISOString()
+      .split('T')[0];
 
-    return await this.incomesRepository.findBy({
-      userId,
-      incomeMonth: new Date(year, month),
-    });
+    const incomes = await this.incomesRepository
+      .createQueryBuilder('in')
+      .where('in.income_month between :from and :to', {
+        from: firstDayOfTheMonth,
+        to: lastDayOfTheMonth,
+      })
+      .andWhere('in.user_id = :userId', { userId })
+      .getMany();
+
+    if (isNull(incomes) || isUndefined(incomes) || isEmpty(incomes)) {
+      return 0;
+    }
+
+    return incomes.reduce((monthTotal, income) => {
+      return monthTotal + Number(income.value);
+    }, 0);
   }
 
   public async create(createIncome: CreateIncomeDto): Promise<IncomeEntity> {

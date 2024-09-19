@@ -19,9 +19,12 @@ export class ExpenseService {
     return response;
   }
 
-  public async getByFilters(dto: FindExpensesFiltersDto) {
+  public async getByFilters(dto: FindExpensesFiltersDto, userId: number) {
     const response = await firstValueFrom(
-      this.financiesClient.send({ cmd: 'expense-by-filters' }, dto),
+      this.financiesClient.send(
+        { cmd: 'expense-by-filters' },
+        { ...dto, userId },
+      ),
     );
 
     return response;
