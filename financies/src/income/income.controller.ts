@@ -1,4 +1,9 @@
-import { Controller } from '@nestjs/common';
+import {
+  Controller,
+  UseFilters,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import { IncomeService } from './income.service';
 import { WageService } from './wage.service';
 import { MessagePattern } from '@nestjs/microservices';
@@ -9,7 +14,10 @@ import { UpdateIncomeDto } from './dto/update-income.dto';
 import { PersistWageDto } from './dto/persist-wage.dto';
 import { WageEntity } from './entities/wage.entity';
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
+import { RcpExceptionFilter } from 'src/filters/rcp-exception.filter';
 
+@UsePipes(new ValidationPipe())
+@UseFilters(new RcpExceptionFilter())
 @Controller()
 export class IncomeController {
   constructor(

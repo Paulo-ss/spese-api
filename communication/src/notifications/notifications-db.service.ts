@@ -73,4 +73,25 @@ export class NotificationsDBService {
       'Notificação lida!',
     );
   }
+
+  public async deleteOneMonthNotifications(): Promise<IGenericMessageResponse> {
+    const today = new Date();
+    today.setMonth(today.getMonth() - 1);
+
+    const oneMonthAgo = new Date(today).toISOString().split('T')[0];
+
+    const oneMonthNotifications = await this.notificationReporsitory
+      .createQueryBuilder('n')
+      .where('n.created_at = :oneMonthAgo', { oneMonthAgo })
+      .getMany();
+
+    await this.commonService.removeMultipleEntities(
+      this.notificationReporsitory,
+      oneMonthNotifications,
+    );
+
+    return this.commonService.generateGenericMessageResponse(
+      'Notificações de 1 mês deletadas',
+    );
+  }
 }

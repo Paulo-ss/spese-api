@@ -1,4 +1,9 @@
-import { Controller } from '@nestjs/common';
+import {
+  Controller,
+  UseFilters,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import { CreditCardsService } from './credit-cards.service';
 import { MessagePattern } from '@nestjs/microservices';
 import { CreditCardEntity } from './entities/credit-card.entity';
@@ -13,7 +18,10 @@ import { InvoiceEntity } from './entities/invoice.entity';
 import { SubscriptionEntity } from './entities/subscription.entity';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
+import { RcpExceptionFilter } from 'src/filters/rcp-exception.filter';
 
+@UsePipes(new ValidationPipe())
+@UseFilters(new RcpExceptionFilter())
 @Controller()
 export class CreditCardsController {
   constructor(

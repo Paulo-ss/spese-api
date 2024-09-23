@@ -1,4 +1,9 @@
-import { Controller } from '@nestjs/common';
+import {
+  Controller,
+  UseFilters,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
 import { MessagePattern } from '@nestjs/microservices';
 import { IMonthSummary } from './interfaces/month-summary.interface';
@@ -7,7 +12,10 @@ import {
   IBarChartReportResponse,
   IDonutChartReportResponse,
 } from './interfaces/reports-responses.interface';
+import { RcpExceptionFilter } from 'src/filters/rcp-exception.filter';
 
+@UsePipes(new ValidationPipe())
+@UseFilters(new RcpExceptionFilter())
 @Controller()
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}

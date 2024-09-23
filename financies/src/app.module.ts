@@ -17,6 +17,8 @@ import { SubscriptionEntity } from './credit-cards/entities/subscription.entity'
 import { ScheduleModule } from '@nestjs/schedule';
 import { TasksModule } from './tasks/tasks.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { BullModule } from '@nestjs/bull';
+import { ReportEntity } from './analytics/entities/report.entity';
 
 @Module({
   imports: [
@@ -35,10 +37,12 @@ import { AnalyticsModule } from './analytics/analytics.module';
         CreditCardEntity,
         InvoiceEntity,
         SubscriptionEntity,
+        ReportEntity,
       ],
       synchronize: true,
     }),
     ScheduleModule.forRoot(),
+    BullModule.forRoot({ redis: { host: 'redis', port: 6379 } }),
     CreditCardsModule,
     BankAccountsModule,
     ExpensesModule,

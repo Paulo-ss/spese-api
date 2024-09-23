@@ -65,4 +65,8 @@ export class CommonService {
   public async removeEntity<T>(repo: Repository<T>, entity: T) {
     await this.throwInternalError(repo.remove(entity));
   }
+
+  public async removeMultipleEntities<T>(repo: Repository<T>, entity: T[]) {
+    await this.throwInternalError(repo.remove(entity));
+  }
 }

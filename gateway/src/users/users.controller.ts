@@ -10,25 +10,15 @@ import { UsersService } from './users.service';
 import { Response } from 'express';
 import { UserDto } from './dto/user.dto';
 import { IsAuthenticatedGuard } from 'src/guards/is-authenticated.guard';
+import { CurrentUser } from 'src/decorators/current-user.decorator';
 
 @UseGuards(IsAuthenticatedGuard)
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Get()
-  public async getAll(@Res() response: Response): Promise<UserDto[]> {
-    const users = await this.usersService.getAll();
-
-    if (users.length === 0) {
-      response.status(HttpStatus.NO_CONTENT).send();
-    }
-
-    return users;
-  }
-
-  @Get(':id')
-  public async getById(@Param() params: { id: string }): Promise<UserDto> {
-    return this.usersService.getById(Number(params.id));
+  @Get('me')
+  public async getById(@CurrentUser() userId: number): Promise<UserDto> {
+    return this.usersService.getById(Number(userId));
   }
 }

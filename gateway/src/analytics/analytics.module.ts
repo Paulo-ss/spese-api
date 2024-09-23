@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
 import { AnalyticsController } from './analytics.controller';
 import { ClientsModule, Transport } from '@nestjs/microservices';
+import { ReportsController } from './reports.controller';
+import { ReportsService } from './reports.service';
 
 @Module({
   imports: [
@@ -13,7 +15,7 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
       },
     ]),
   ],
-  controllers: [AnalyticsController],
-  providers: [AnalyticsService],
+  controllers: [AnalyticsController, ReportsController],
+  providers: [AnalyticsService, ReportsService],
 })
 export class AnalyticsModule {}

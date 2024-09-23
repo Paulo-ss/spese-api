@@ -35,10 +35,14 @@ services:
     build: ./financies
     command: npm run start:dev
     restart: always
+    ports:
+      - 8080:8080
     env_file:
       - ./financies/.env
     volumes:
       - ./financies:/home/spese/financies
+    volumes_from:
+      - keys
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
@@ -56,3 +60,6 @@ services:
       - keys
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+  redis:
+    image: redis:alpine

@@ -15,13 +15,6 @@ import { RcpExceptionFilter } from 'src/filters/rcp-exception.filter';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @MessagePattern({ cmd: 'get-all-users' })
-  public async getAll(): Promise<UserDto[]> {
-    const users = await this.usersService.findAll();
-
-    return users.map(UserDto.entityToDto);
-  }
-
   @MessagePattern({ cmd: 'get-by-id' })
   public async getById({ userId }: { userId: number }): Promise<UserDto> {
     const user = await this.usersService.findOneById(userId);

@@ -1,4 +1,9 @@
-import { Controller } from '@nestjs/common';
+import {
+  Controller,
+  UseFilters,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import { ExpensesService } from './expenses.service';
 import { MessagePattern } from '@nestjs/microservices';
 import { ExpenseEntity } from './entities/expense.entity';
@@ -6,7 +11,10 @@ import { FindByIdAndUserIdDto } from 'src/common/dto/find-by-id-and-user-id.dto'
 import { FindExpensesFiltersDto } from './dto/find-expenses-filters.dto';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
+import { RcpExceptionFilter } from 'src/filters/rcp-exception.filter';
 
+@UsePipes(new ValidationPipe())
+@UseFilters(new RcpExceptionFilter())
 @Controller('expenses')
 export class ExpensesController {
   constructor(private readonly expensesService: ExpensesService) {}

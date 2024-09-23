@@ -9,14 +9,6 @@ export class UsersService {
     @Inject('AUTHORIZATION') private readonly authorizationClient: ClientProxy,
   ) {}
 
-  public async getAll(): Promise<UserDto[]> {
-    const response: UserDto[] = await firstValueFrom(
-      this.authorizationClient.send({ cmd: 'get-all-users' }, {}),
-    );
-
-    return response;
-  }
-
   public async getById(userId: number): Promise<UserDto> {
     const response: UserDto = await firstValueFrom(
       this.authorizationClient.send({ cmd: 'get-by-id' }, { userId }),

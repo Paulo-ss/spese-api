@@ -9,6 +9,8 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { NotificationEntity } from './notifications/entities/notification.entity';
 import { CommonModule } from './common/common.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { TasksModule } from './tasks/tasks.module';
 
 @Module({
   imports: [
@@ -23,9 +25,11 @@ import { CommonModule } from './common/common.module';
       entities: [NotificationEntity],
       synchronize: true,
     }),
+    ScheduleModule.forRoot(),
     MailerModule,
     NotificationsModule,
     CommonModule,
+    TasksModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -25,7 +25,7 @@ export class NotificationsController {
 
   @UseGuards(IsAuthenticatedGuard)
   @Sse('count')
-  public sendClosedInvoicesNotifications(
+  public countUnreadNotifications(
     @CurrentUser() userId: number,
   ): Observable<MessageEvent> {
     return concat(
@@ -53,7 +53,7 @@ export class NotificationsController {
       const invoiceDate = new Date(invoice.month);
 
       const title = `Sua fatura ${invoice.creditCard.nickname} fechou!`;
-      const content = `Fatura do mês ${invoiceDate.toLocaleDateString('pt-br', { month: 'long' })} está fechada, efetue o pagamento até o dia ${invoice.creditCard.dueDay}/${invoiceDate.toLocaleDateString('pt-br', { month: '2-digit' })}.`;
+      const content = `Fatura do mês de ${invoiceDate.toLocaleDateString('pt-br', { month: 'long' })} está fechada, efetue o pagamento até o dia ${invoice.creditCard.dueDay}/${invoiceDate.toLocaleDateString('pt-br', { month: '2-digit' })}.`;
 
       const notification = await this.notifcationDBService.create({
         userId: invoice.userId,
@@ -73,7 +73,7 @@ export class NotificationsController {
       const invoiceDate = new Date(invoice.month);
 
       const title = `Fatura ${invoice.creditCard.nickname} atrasada!`;
-      const content = `A fatura do mês ${invoiceDate.toLocaleDateString('pt-br', { month: 'long' })} está atrasada, efetue o pagamento o quanto antes.`;
+      const content = `A fatura do mês de ${invoiceDate.toLocaleDateString('pt-br', { month: 'long' })} está atrasada, efetue o pagamento o quanto antes.`;
 
       const notification = await this.notifcationDBService.create({
         userId: invoice.userId,
