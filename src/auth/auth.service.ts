@@ -21,7 +21,7 @@ import {
   IEmailToken,
   IRefreshToken,
 } from 'src/jwt/interfaces/tokens.interface';
-import { ResetPasswordEmailDto } from './dto/reset-password-emai.dto';
+import { ResetPasswordEmailDto } from './dto/reset-password-email.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { isNull, isUndefined } from 'src/common/utils/validation.utils';
 import { ExternalSignInDto } from './dto/external-sign-in.dto';

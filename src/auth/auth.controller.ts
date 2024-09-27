@@ -12,7 +12,7 @@ import { SignUpDto } from './dto/sign-up.dto';
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
 import { SignInDto } from './dto/sign-in.dto';
 import { IAuthResult } from './interfaces/auth-result.interface';
-import { ResetPasswordEmailDto } from './dto/reset-password-emai.dto';
+import { ResetPasswordEmailDto } from './dto/reset-password-email.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { IsAuthenticatedGuard } from 'src/guards/is-authenticated.guard';
 import { ConfirmEmailDto } from './dto/confirm-email.dto';

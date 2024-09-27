@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
@@ -46,5 +47,13 @@ export class ExpensesController {
   @Put(':id')
   public async pay(@Param('id', ParseIntPipe) id: number) {
     return this.expensesService.payExpense(id);
+  }
+
+  @Delete(':id')
+  public async delete(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() userId: number,
+  ) {
+    return this.expensesService.delete(id, userId);
   }
 }

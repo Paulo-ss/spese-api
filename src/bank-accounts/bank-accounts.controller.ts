@@ -43,11 +43,12 @@ export class BankAccountsController {
     return await this.bankAccountsService.create(bankAccount, userId);
   }
 
-  @Put()
+  @Put(':id')
   public async update(
+    @Param('id', ParseIntPipe) id: number,
     @Body() bankAccount: UpdateBankAccountDto,
     @CurrentUser() userId: number,
   ) {
-    return await this.bankAccountsService.update(bankAccount, userId);
+    return await this.bankAccountsService.update(id, bankAccount, userId);
   }
 }

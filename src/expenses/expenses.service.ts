@@ -264,4 +264,17 @@ export class ExpensesService {
 
     return this.commonService.generateGenericMessageResponse(`Despesa paga!`);
   }
+
+  public async delete(
+    id: number,
+    userId: number,
+  ): Promise<IGenericMessageResponse> {
+    const expense = await this.findById(id, userId);
+
+    await this.commonService.removeEntity(this.expensesRepository, expense);
+
+    return this.commonService.generateGenericMessageResponse(
+      'Despesa deletada com sucesso!',
+    );
+  }
 }

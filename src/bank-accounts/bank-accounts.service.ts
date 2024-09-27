@@ -58,13 +58,11 @@ export class BankAccountsService {
   }
 
   public async update(
+    id: number,
     updateBankAccountDto: UpdateBankAccountDto,
     userId: number,
   ): Promise<BankAccountEntity> {
-    const bankAccount = await this.findById(
-      updateBankAccountDto.bankAccountId,
-      userId,
-    );
+    const bankAccount = await this.findById(id, userId);
     bankAccount.currentBalance = updateBankAccountDto.currentBalance;
 
     await this.commonService.saveEntity(

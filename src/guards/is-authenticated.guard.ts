@@ -30,7 +30,7 @@ export class IsAuthenticatedGuard implements CanActivate {
     let isAuthenticated = false;
 
     const publicKey = readFileSync(
-      join(__dirname, '..', '..', '..', 'keys/key.pub'),
+      join(__dirname, '..', '..', 'keys/key.pub'),
       'utf-8',
     );
 

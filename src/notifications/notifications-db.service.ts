@@ -8,7 +8,7 @@ import { CommonService } from 'src/common/common.service';
 import { InvoicesDto } from './dto/invoices.dto';
 import { NotificationType } from './enums/notification-type.enum';
 import { NotificationsService } from './notifications.service';
-import { ReportJobDto } from './dto/report-job.dto';
+import { ReportJobDto } from 'src/analytics/dto/report-job.dto';
 
 @Injectable()
 export class NotificationsDBService {

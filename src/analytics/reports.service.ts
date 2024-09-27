@@ -14,8 +14,8 @@ import { ReportJobDto } from './dto/report-job.dto';
 import * as fs from 'fs';
 import * as path from 'path';
 import { Parser } from '@json2csv/plainjs';
-import { ClientProxy } from '@nestjs/microservices';
 import { DATE_MM_YYYY_REGEX } from 'src/common/utils/regex.const';
+import { NotificationsDBService } from 'src/notifications/notifications-db.service';
 
 @Injectable()
 export class ReportsService {
@@ -26,10 +26,9 @@ export class ReportsService {
     private readonly reportRepository: Repository<ReportEntity>,
     @InjectQueue('reports')
     private readonly reportsQueue: Queue<ReportJobDto>,
-    @Inject('COMMUNICATIONS')
-    private readonly communicationsClient: ClientProxy,
     private readonly commonService: CommonService,
     private readonly analyticsService: AnalyticsService,
+    private readonly notificationsDBService: NotificationsDBService,
   ) {
     this.emitter = new EventEmitter();
   }
@@ -58,7 +57,7 @@ export class ReportsService {
     userId: number,
   ): Promise<IGenericMessageResponse> {
     const report = this.reportRepository.create({
-      userId: reportDto.userId,
+      userId: userId,
       status: ReportStatus.PENDING,
     });
 
@@ -117,10 +116,7 @@ export class ReportsService {
 
       await this.emit(`${userId}.${reportId}.report-status`, ReportStatus.DONE);
 
-      this.communicationsClient.emit(
-        { cmd: 'send-report-done-not' },
-        reportDto,
-      );
+      this.notificationsDBService.emitReportDoneNotification(reportDto);
     } catch (error) {
       const report = await this.reportRepository.save({
         id: reportId,
