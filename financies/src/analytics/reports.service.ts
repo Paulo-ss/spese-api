@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ReportEntity } from './entities/report.entity';
 import { Repository } from 'typeorm';
@@ -11,9 +11,11 @@ import { InjectQueue } from '@nestjs/bull';
 import { EventEmitter } from 'stream';
 import { fromEvent } from 'rxjs';
 import { ReportJobDto } from './dto/report-job.dto';
-import * as csvWriter from 'csv-writer';
 import * as fs from 'fs';
 import * as path from 'path';
+import { Parser } from '@json2csv/plainjs';
+import { DATE_MM_YYYY_REGEX } from 'src/common/utils/validation.utils';
+import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable()
 export class ReportsService {
@@ -24,6 +26,8 @@ export class ReportsService {
     private readonly reportRepository: Repository<ReportEntity>,
     @InjectQueue('reports')
     private readonly reportsQueue: Queue<ReportJobDto>,
+    @Inject('COMMUNICATIONS')
+    private readonly communicationsClient: ClientProxy,
     private readonly commonService: CommonService,
     private readonly analyticsService: AnalyticsService,
   ) {
@@ -88,34 +92,30 @@ export class ReportsService {
         userId,
       );
 
-      const reportContent = { ...monthSummary, month };
+      const reportContent = {
+        Mês: month,
+        Renda: monthSummary.budget,
+        'Despesas Totais': monthSummary.expensesTotal,
+        'Total Pago': monthSummary.paidTotal,
+        'Saldo do Mês': monthSummary.monthBalance,
+      };
 
-      const writer = csvWriter.createObjectCsvWriter({
-        path: path.resolve(__dirname, `${userId}-${month}-summary.csv`),
-        header: [
-          { id: 'month', title: 'Mês' },
-          { id: 'budget', title: 'Renda' },
-          { id: 'expensesTotal', title: 'Despesas Totais' },
-          { id: 'paidTotal', title: 'Total Pago' },
-          { id: 'monthBalance', title: 'Saldo do Mês' },
-        ],
-      });
-
-      await writer.writeRecords([reportContent]);
-
-      const reportFile = fs.readFileSync(
-        path.join(__dirname, `${userId}-${month}-summary.csv`),
-        'utf-8',
-      );
+      const parser = new Parser();
+      const csv = parser.parse(reportContent);
 
       await this.reportRepository.save({
         id: reportId,
         status: ReportStatus.DONE,
         filename: `${userId}-${month}-summary.csv`,
-        content: reportFile.toString(),
+        content: csv,
       });
 
       await this.emit(`${userId}.${reportId}.report-status`, ReportStatus.DONE);
+
+      this.communicationsClient.emit(
+        { cmd: 'send-report-done-not' },
+        reportDto,
+      );
     } catch (error) {
       console.log({ error });
 
@@ -129,5 +129,35 @@ export class ReportsService {
         ReportStatus.ERROR,
       );
     }
+  }
+
+  public async deleteReportsOlderThanOneDay(): Promise<IGenericMessageResponse> {
+    const reports = await this.reportRepository
+      .createQueryBuilder('r')
+      .where('r.created_at < NOW() - INTERVAL "1 Day"')
+      .getMany();
+
+    await this.commonService.removeMultipleEntities(
+      this.reportRepository,
+      reports,
+    );
+
+    return this.commonService.generateGenericMessageResponse(
+      'Relatórios com mais de 1h de geração foram deletados.',
+    );
+  }
+
+  public async downloadReport(
+    reportId: number,
+  ): Promise<{ filename: string; file: fs.ReadStream }> {
+    const report = await this.getReportById(reportId);
+    this.commonService.checkEntityExistence(report, 'Relatório');
+
+    const filename = `${report.content.match(DATE_MM_YYYY_REGEX)[0]}-report.csv`;
+    fs.writeFileSync(path.join(__dirname, filename), report.content);
+
+    const file = fs.createReadStream(path.join(__dirname, filename));
+
+    return { filename, file };
   }
 }

@@ -10,9 +10,17 @@ import { ReportsService } from './reports.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ReportEntity } from './entities/report.entity';
 import { ReportsController } from './reports.controller';
+import { ClientsModule, Transport } from '@nestjs/microservices';
 
 @Module({
   imports: [
+    ClientsModule.register([
+      {
+        name: 'COMMUNICATIONS',
+        transport: Transport.TCP,
+        options: { port: 8081, host: 'communication' },
+      },
+    ]),
     BullModule.registerQueue({ name: 'reports' }),
     TypeOrmModule.forFeature([ReportEntity]),
     IncomeModule,
@@ -21,5 +29,6 @@ import { ReportsController } from './reports.controller';
   ],
   controllers: [AnalyticsController, ReportsController],
   providers: [AnalyticsService, ReportsJobService, ReportsService],
+  exports: [ReportsService],
 })
 export class AnalyticsModule {}

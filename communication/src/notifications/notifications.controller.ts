@@ -2,6 +2,9 @@ import {
   Controller,
   Get,
   MessageEvent,
+  Param,
+  ParseIntPipe,
+  Put,
   Sse,
   UseGuards,
   UsePipes,
@@ -15,6 +18,8 @@ import { CurrentUser } from 'src/decorators/current-user.decorator';
 import { InvoicesDto } from './dto/invoices.dto';
 import { NotificationsDBService } from './notifications-db.service';
 import { NotificationType } from './enums/notification-type.enum';
+import { ReportJobDto } from './dto/report-job.dto';
+import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
 
 @Controller('notifications')
 export class NotificationsController {
@@ -44,6 +49,14 @@ export class NotificationsController {
   @Get('user')
   public async getNotificationsByUser(@CurrentUser() userId: number) {
     return this.notifcationDBService.findByUserId(userId);
+  }
+
+  @UseGuards(IsAuthenticatedGuard)
+  @Put(':id')
+  public async markNotificationAsRead(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<IGenericMessageResponse> {
+    return this.notifcationDBService.markNotificationAsRead(id);
   }
 
   @UsePipes(new ValidationPipe())
@@ -84,5 +97,21 @@ export class NotificationsController {
 
       this.notificationsService.emit(`${invoice.userId}.notify`, notification);
     });
+  }
+
+  @UsePipes(new ValidationPipe())
+  @EventPattern({ cmd: 'send-report-done-not' })
+  public async emitReportDoneNotification(report: ReportJobDto) {
+    const title = `Relatório pronto!`;
+    const content = `O seu relatório solicitado do mês ${report.month.replace('-', '/')} ficou pronto, clique aqui para baixar.`;
+
+    const notification = await this.notifcationDBService.create({
+      userId: report.userId,
+      title,
+      content,
+      type: NotificationType.REPORTS,
+    });
+
+    this.notificationsService.emit(`${report.userId}.notify`, notification);
   }
 }
