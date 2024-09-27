@@ -1,63 +1,14 @@
 services:
-  keys:
-    build: ./keys
-    command: tail -f /dev/null
-    volumes:
-      - ./keys:/home/spese/keys
-
-  gateway:
-    build: ./gateway
+  spese-api:
+    build: .
     command: npm run start:dev
     restart: always
     ports:
       - 8082:8082
     env_file:
-      - ./gateway/.env
+      - .env
     volumes:
-      - ./gateway:/home/spese/gateway
-    volumes_from:
-      - keys
-
-  authorization:
-    build: ./authorization
-    command: npm run start:dev
-    restart: always
-    env_file:
-      - ./authorization/.env
-    volumes:
-      - ./authorization:/home/spese/authorization
-    volumes_from:
-      - keys
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-
-  financies:
-    build: ./financies
-    command: npm run start:dev
-    restart: always
-    ports:
-      - 8080:8080
-    env_file:
-      - ./financies/.env
-    volumes:
-      - ./financies:/home/spese/financies
-    volumes_from:
-      - keys
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-
-  communication:
-    build: ./communication
-    command: npm run start:dev
-    ports:
-      - 8687:8687
-    restart: always
-    env_file:
-      - ./communication/.env
-    volumes:
-      - ./communication:/home/spese/communication
-    volumes_from:
-      - keys
+      - .:/home/spese-api
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
