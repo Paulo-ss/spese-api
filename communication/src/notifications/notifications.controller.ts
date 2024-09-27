@@ -72,6 +72,7 @@ export class NotificationsController {
         userId: invoice.userId,
         title,
         content,
+        referenceId: invoice.invoiceId,
         type: NotificationType.INVOICES,
       });
 
@@ -92,6 +93,7 @@ export class NotificationsController {
         userId: invoice.userId,
         title,
         content,
+        referenceId: invoice.invoiceId,
         type: NotificationType.INVOICES,
       });
 
@@ -109,6 +111,7 @@ export class NotificationsController {
       userId: report.userId,
       title,
       content,
+      referenceId: report.reportId,
       type: NotificationType.REPORTS,
     });
 

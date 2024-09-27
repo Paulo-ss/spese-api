@@ -4,6 +4,7 @@ export interface INotification {
   id: number;
   title: string;
   content: string;
+  referenceId: number;
   type: NotificationType;
   userId: number;
   isRead: boolean;

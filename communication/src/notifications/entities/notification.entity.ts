@@ -19,6 +19,9 @@ export class NotificationEntity implements INotification {
   @Column({ name: 'content' })
   public content: string;
 
+  @Column({ name: 'reference_id' })
+  public referenceId: number;
+
   @Column('enum', { name: 'type', enum: NotificationType })
   public type: NotificationType;
 

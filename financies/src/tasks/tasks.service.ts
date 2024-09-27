@@ -13,7 +13,7 @@ export class TasksService {
     private readonly reportsService: ReportsService,
   ) {}
 
-  @Cron(CronExpression.EVERY_10_SECONDS)
+  @Cron(CronExpression.EVERY_DAY_AT_1AM)
   public async closeInvoices() {
     const closedInvoices = await this.invoiceService.closeInvoices();
 
@@ -23,7 +23,7 @@ export class TasksService {
     );
   }
 
-  @Cron(CronExpression.EVERY_10_SECONDS)
+  @Cron(CronExpression.EVERY_DAY_AT_2AM)
   public async markInvoicesAsDelayed() {
     const delayedInvoices = await this.invoiceService.markInvoicesAsDelayed();
 
@@ -33,7 +33,7 @@ export class TasksService {
     );
   }
 
-  @Cron(CronExpression.EVERY_DAY_AT_5AM)
+  @Cron(CronExpression.EVERY_DAY_AT_3AM)
   public async deleteReportsOlderThanOneDay() {
     await this.reportsService.deleteReportsOlderThanOneDay();
   }

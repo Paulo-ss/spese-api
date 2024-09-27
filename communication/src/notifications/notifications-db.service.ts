@@ -48,6 +48,7 @@ export class NotificationsDBService {
       type: createNotifcationDto.type,
       title: createNotifcationDto.title,
       content: createNotifcationDto.content,
+      referenceId: createNotifcationDto.referenceId,
       isRead: false,
     });
 

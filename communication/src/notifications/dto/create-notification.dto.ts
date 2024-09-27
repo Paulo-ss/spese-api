@@ -13,4 +13,7 @@ export class CreateNotificationDto {
 
   @IsString()
   public content: string;
+
+  @IsNumber()
+  public referenceId: number;
 }
