@@ -22,6 +22,10 @@ export class FindExpensesFiltersDto {
 
   @IsOptional()
   @IsString()
+  public customCategory?: string;
+
+  @IsOptional()
+  @IsString()
   public name?: string;
 
   @IsOptional()

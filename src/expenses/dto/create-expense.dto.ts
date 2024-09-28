@@ -42,6 +42,10 @@ export class CreateExpenseDto {
   @IsEnum(ExpenseCategory)
   public category?: ExpenseCategory;
 
+  @IsOptional()
+  @IsString()
+  public customCategory?: string;
+
   @Matches(DATE_MM_DD_YYYY_REGEX, {
     message: 'A data deve estar no formato MM-dd-yyyy',
   })

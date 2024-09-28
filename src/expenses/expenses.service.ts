@@ -15,6 +15,7 @@ import { CreateInstallmentDto } from 'src/credit-cards/dto/create-installment.dt
 import { InvoiceStatus } from 'src/credit-cards/enums/invoice-status.enum';
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
 import { ExpenseStatus } from './enums/expense-status.enum';
+import { ExpenseCategory } from './enums/expense-category.enum';
 
 @Injectable()
 export class ExpensesService {
@@ -68,9 +69,17 @@ export class ExpensesService {
     }
 
     if (filters.category) {
-      query.andWhere('e.category = :category', {
-        category: filters.category,
-      });
+      if (filters.category === ExpenseCategory.CUSTOM) {
+        query.andWhere('e.custom_category = :customCategory', {
+          customCategory: filters.customCategory,
+        });
+      }
+
+      if (filters.category !== ExpenseCategory.CUSTOM) {
+        query.andWhere('e.category = :category', {
+          category: filters.category,
+        });
+      }
     }
 
     if (filters.name) {
@@ -117,6 +126,7 @@ export class ExpensesService {
       price,
       bankAccountId,
       category,
+      customCategory,
       creditCardId,
       installments,
       expenseDate,
@@ -150,7 +160,9 @@ export class ExpensesService {
         const invoiceStatus =
           currentMonth === expenseMonth
             ? InvoiceStatus.OPENED_CURRENT
-            : InvoiceStatus.OPENED_FUTURE;
+            : currentMonth < expenseMonth
+              ? InvoiceStatus.PAID
+              : InvoiceStatus.OPENED_FUTURE;
 
         invoice = await this.invoiceService.create({
           creditCard,
@@ -219,6 +231,7 @@ export class ExpensesService {
               bankAccount,
               creditCard,
               category,
+              customCategory,
               invoice: invoices[i - 1],
               installmentNumber: i,
               userId,
@@ -246,6 +259,7 @@ export class ExpensesService {
       bankAccount,
       creditCard,
       category,
+      customCategory,
       invoice: invoices[0],
       userId,
       expenseDate: new Date(expenseDate),

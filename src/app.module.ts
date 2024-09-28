@@ -35,6 +35,7 @@ import { validationSchema } from './config/schema/config.schema';
 import { config } from './config';
 import { CommonModule } from './common/common.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { CategoryModule } from './category/category.module';
 
 @Module({
   imports: [
@@ -73,6 +74,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     AnalyticsModule,
     CommonModule,
     NotificationsModule,
+    CategoryModule,
   ],
   controllers: [
     AppController,

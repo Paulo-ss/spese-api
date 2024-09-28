@@ -1,5 +1,6 @@
 export enum ExpenseCategory {
   NA = 'NÃO INFORMADO',
+  CUSTOM = 'PERSONALIZADA',
   HEALTH = 'SAÚDE',
   LEISURE = 'LAZER',
   ACADEMIC = 'ACADÊMICO',

@@ -49,6 +49,9 @@ export class ExpenseEntity implements IExpense {
   @Column('enum', { name: 'category', enum: ExpenseCategory, nullable: true })
   public category?: ExpenseCategory;
 
+  @Column({ name: 'custom_category', nullable: true })
+  public customCategory?: string;
+
   @Column({ name: 'user_id' })
   public userId: number;
 
