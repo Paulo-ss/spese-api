@@ -36,6 +36,7 @@ import { config } from './config';
 import { CommonModule } from './common/common.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { CategoryModule } from './category/category.module';
+import { CategoryEntity } from './category/entities/category.entity';
 
 @Module({
   imports: [
@@ -59,11 +60,18 @@ import { CategoryModule } from './category/category.module';
         BlacklistedTokenEntity,
         ReportEntity,
         NotificationEntity,
+        CategoryEntity,
       ],
       synchronize: !JSON.parse(process.env.IS_PRODUCTION),
     }),
     ScheduleModule.forRoot(),
-    BullModule.forRoot({ redis: { host: 'redis', port: 6379 } }),
+    BullModule.forRoot({
+      redis: {
+        host: process.env.REDIS_HOST,
+        port: JSON.parse(process.env.REDIS_PORT),
+        password: process.env.REDIS_PASSWORD,
+      },
+    }),
     ConfigModule.forRoot({ isGlobal: true, validationSchema, load: [config] }),
     UsersModule,
     AuthModule,

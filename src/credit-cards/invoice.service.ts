@@ -116,10 +116,6 @@ export class InvoiceService {
       throw new BadRequestException('Essa fatura já está fechada.');
     }
 
-    if (invoice.status === InvoiceStatus.PAID) {
-      throw new BadRequestException('Essa fatura já está paga.');
-    }
-
     invoice.currentPrice = price;
 
     await this.commonService.saveEntity(this.invoiceRepository, invoice);

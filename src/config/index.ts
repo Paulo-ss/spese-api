@@ -49,5 +49,10 @@ export function config(): IConfig {
       },
     },
     isProduction: JSON.parse(process.env.IS_PRODUCTION),
+    redisConfig: {
+      host: process.env.REDIS_HOST,
+      port: JSON.parse(process.env.REDIS_PORT),
+      password: process.env.REDIS_PASSWORD,
+    },
   };
 }

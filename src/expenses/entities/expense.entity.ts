@@ -16,6 +16,7 @@ import { CreditCardEntity } from 'src/credit-cards/entities/credit-card.entity';
 import { ExpenseCategory } from '../enums/expense-category.enum';
 import { IInvoice } from 'src/credit-cards/interfaces/invoice.interface';
 import { InvoiceEntity } from 'src/credit-cards/entities/invoice.entity';
+import { CategoryEntity } from 'src/category/entities/category.entity';
 
 @Entity({ name: 'expenses' })
 export class ExpenseEntity implements IExpense {
@@ -49,8 +50,8 @@ export class ExpenseEntity implements IExpense {
   @Column('enum', { name: 'category', enum: ExpenseCategory, nullable: true })
   public category?: ExpenseCategory;
 
-  @Column({ name: 'custom_category', nullable: true })
-  public customCategory?: string;
+  @ManyToOne(() => CategoryEntity)
+  public customCategory?: number;
 
   @Column({ name: 'user_id' })
   public userId: number;

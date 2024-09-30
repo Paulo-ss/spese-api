@@ -16,6 +16,7 @@ import { InvoiceStatus } from 'src/credit-cards/enums/invoice-status.enum';
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
 import { ExpenseStatus } from './enums/expense-status.enum';
 import { ExpenseCategory } from './enums/expense-category.enum';
+import { getInvoiceMonth } from 'src/credit-cards/utils/get-invoice-month.util';
 
 @Injectable()
 export class ExpensesService {
@@ -53,6 +54,7 @@ export class ExpensesService {
     const query = this.expensesRepository
       .createQueryBuilder('e')
       .leftJoinAndSelect('e.bankAccount', 'ba')
+      .leftJoinAndSelect('e.customCategory', 'cat')
       .leftJoin('e.creditCard', 'cc')
       .where('e.expense_date between :fromMonth and :nextMonth', {
         fromMonth: fromDate,
@@ -70,7 +72,7 @@ export class ExpensesService {
 
     if (filters.category) {
       if (filters.category === ExpenseCategory.CUSTOM) {
-        query.andWhere('e.custom_category = :customCategory', {
+        query.andWhere('e.customCategory = :customCategory', {
           customCategory: filters.customCategory,
         });
       }
@@ -147,7 +149,7 @@ export class ExpensesService {
     const invoices: InvoiceEntity[] = [];
 
     if (creditCard) {
-      const expenseMonth = new Date(expenseDate).getMonth();
+      const today = new Date();
 
       invoice = await this.invoiceService.findByMonthAndCreditCard(
         creditCardId,
@@ -156,13 +158,20 @@ export class ExpensesService {
       );
 
       if (isNull(invoice) || isUndefined(invoice)) {
-        const currentMonth = new Date().getMonth();
-        const invoiceStatus =
-          currentMonth === expenseMonth
-            ? InvoiceStatus.OPENED_CURRENT
-            : currentMonth < expenseMonth
-              ? InvoiceStatus.PAID
-              : InvoiceStatus.OPENED_FUTURE;
+        const { month, year } = getInvoiceMonth(
+          creditCard.closingDay,
+          new Date(expenseDate),
+        );
+
+        let invoiceStatus: InvoiceStatus = InvoiceStatus.PAID;
+
+        if (month > today.getMonth() || year > today.getFullYear()) {
+          invoiceStatus = InvoiceStatus.OPENED_FUTURE;
+        }
+
+        if (month - today.getMonth() === 1 && year === today.getFullYear()) {
+          invoiceStatus = InvoiceStatus.OPENED_CURRENT;
+        }
 
         invoice = await this.invoiceService.create({
           creditCard,
@@ -196,6 +205,23 @@ export class ExpensesService {
             );
 
           if (isNull(installmentInvoice) || isUndefined(installmentInvoice)) {
+            const { month, year } = getInvoiceMonth(
+              creditCard.closingDay,
+              new Date(previousInvoice.closingDate),
+            );
+
+            let invoiceStatus = InvoiceStatus.PAID;
+            if (month > today.getMonth() || year > today.getFullYear()) {
+              invoiceStatus = InvoiceStatus.OPENED_FUTURE;
+            }
+
+            if (
+              month - today.getMonth() === 1 &&
+              year === today.getFullYear()
+            ) {
+              invoiceStatus = InvoiceStatus.OPENED_CURRENT;
+            }
+
             installmentInvoice = await this.invoiceService.create({
               creditCard,
               currentPrice: price,
@@ -203,7 +229,7 @@ export class ExpensesService {
                 nextInvoiceDate.getFullYear(),
                 nextInvoiceDate.getMonth(),
               ),
-              status: InvoiceStatus.OPENED_FUTURE,
+              status: invoiceStatus,
             });
           } else {
             const id = installmentInvoice.id;

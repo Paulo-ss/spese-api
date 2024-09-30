@@ -14,7 +14,7 @@ export interface IExpense {
   expenseDate: Date;
   updatedAt: Date;
   category?: ExpenseCategory;
-  customCategory?: string;
+  customCategory?: number;
   bankAccount?: IBankAccount;
   creditCard?: ICreditCard;
   installmentNumber?: number;

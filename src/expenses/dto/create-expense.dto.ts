@@ -43,8 +43,8 @@ export class CreateExpenseDto {
   public category?: ExpenseCategory;
 
   @IsOptional()
-  @IsString()
-  public customCategory?: string;
+  @IsNumber()
+  public customCategory?: number;
 
   @Matches(DATE_MM_DD_YYYY_REGEX, {
     message: 'A data deve estar no formato MM-dd-yyyy',

@@ -22,4 +22,7 @@ export const validationSchema = Joi.object({
   DOMAIN: Joi.string().required(),
   IS_PRODUCTION: Joi.boolean().required(),
   JWT_PRIVATE_KEY: Joi.string().required(),
+  REDIS_HOST: Joi.string().required(),
+  REDIS_PORT: Joi.number().required(),
+  REDIS_PASSWORD: Joi.string(),
 });
