@@ -164,12 +164,17 @@ export class ExpensesService {
         );
 
         let invoiceStatus: InvoiceStatus = InvoiceStatus.PAID;
-
         if (month > today.getMonth() || year > today.getFullYear()) {
           invoiceStatus = InvoiceStatus.OPENED_FUTURE;
         }
 
-        if (month - today.getMonth() === 1 && year === today.getFullYear()) {
+        if (
+          ((month - today.getMonth() === 1 &&
+            today.getDate() >= creditCard.closingDay) ||
+            (month === today.getMonth() &&
+              today.getDate() < creditCard.closingDay)) &&
+          year === today.getFullYear()
+        ) {
           invoiceStatus = InvoiceStatus.OPENED_CURRENT;
         }
 
@@ -216,7 +221,10 @@ export class ExpensesService {
             }
 
             if (
-              month - today.getMonth() === 1 &&
+              ((month - today.getMonth() === 1 &&
+                today.getDate() >= creditCard.closingDay) ||
+                (month === today.getMonth() &&
+                  today.getDate() < creditCard.closingDay)) &&
               year === today.getFullYear()
             ) {
               invoiceStatus = InvoiceStatus.OPENED_CURRENT;

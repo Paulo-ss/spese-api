@@ -71,7 +71,7 @@ export class InvoiceService {
     const invoiceClosingDate = new Date(year, month);
     invoiceClosingDate.setDate(closingDay);
 
-    const invoiceDueDate = getNextBusinessDay(new Date(year, month));
+    const invoiceDueDate = new Date(year, month);
 
     // If the due day is smaller than the closing day, that means
     // that the invoice due day is on the next month
@@ -84,29 +84,12 @@ export class InvoiceService {
     const invoice = this.invoiceRepository.create({
       ...createInvoiceDto,
       closingDate: invoiceClosingDate,
-      dueDate: invoiceDueDate,
+      dueDate: getNextBusinessDay(invoiceDueDate),
     });
 
     await this.commonService.saveEntity(this.invoiceRepository, invoice);
 
     return invoice;
-  }
-
-  public async createMultiple(
-    invoices: CreateInvoiceDto[],
-  ): Promise<InvoiceEntity[]> {
-    const createdInvoices: InvoiceEntity[] = [];
-
-    invoices.forEach((invoice) => {
-      createdInvoices.push(this.invoiceRepository.create({ ...invoice }));
-    });
-
-    await this.commonService.saveMultipleEntities(
-      this.invoiceRepository,
-      createdInvoices,
-    );
-
-    return createdInvoices;
   }
 
   public async updatePrice(id: number, price: number): Promise<InvoiceEntity> {

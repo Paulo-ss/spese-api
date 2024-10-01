@@ -1,3 +1,3 @@
-# Spese Microservices
+# Spese API
 
-A microservices based back-end API in NestJS with Docker for the Spese front-end project.
+A RestAPI back-end in NestJS with Docker for the Spese front-end project.
