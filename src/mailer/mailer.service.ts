@@ -60,7 +60,7 @@ export class MailerService {
     const subject = 'Confirme o seu e-mail';
     const html = this.templates.confirmation({
       name,
-      link: `${this.domain}/auth/confirm/${token}`,
+      link: `${this.domain}/auth/confirm-email/${token}`,
     });
 
     this.sendEmail(email, subject, html, 'A new confirmation email was sent.');

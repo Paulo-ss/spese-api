@@ -157,7 +157,7 @@ export class AuthService {
       await externalOauthService.validateExternalProviderToken(
         externalOauthSignIn,
       );
-    let user = await this.usersService.findOneByEmail(email);
+    let user = await this.usersService.findOneByEmail(email, false);
 
     if (isUndefined(user) || isNull(user)) {
       user = await this.usersService.externalOauthCreate(name, email);
@@ -235,6 +235,10 @@ export class AuthService {
     const user = await this.usersService.findOneByEmail(
       resetPasswordEmailDto.email,
     );
+
+    if (!user.confirmed) {
+      throw new BadRequestException('Usuário não está confirmado.');
+    }
 
     const resetPasswordToken = await this.jwtService.generateToken(
       user,

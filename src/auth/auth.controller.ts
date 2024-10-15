@@ -7,11 +7,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { MessagePattern } from '@nestjs/microservices';
 import { SignUpDto } from './dto/sign-up.dto';
-import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
 import { SignInDto } from './dto/sign-in.dto';
-import { IAuthResult } from './interfaces/auth-result.interface';
 import { ResetPasswordEmailDto } from './dto/reset-password-email.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { IsAuthenticatedGuard } from 'src/guards/is-authenticated.guard';
@@ -33,7 +30,6 @@ export class AuthController {
     return this.authService.signIn(signInDto);
   }
 
-  @UseGuards(IsAuthenticatedGuard)
   @Post('refresh-token')
   public async refreshAccessToken(@Body() refreshTokenDto: RefreshTokenDto) {
     return this.authService.refreshAccessToken(refreshTokenDto.refreshToken);

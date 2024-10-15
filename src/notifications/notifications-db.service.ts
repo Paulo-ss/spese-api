@@ -31,7 +31,7 @@ export class NotificationsDBService {
       where: { userId },
       order: {
         createdAt: { direction: 'DESC' },
-        isRead: { direction: 'DESC' },
+        isRead: { direction: 'ASC' },
       },
     });
   }
