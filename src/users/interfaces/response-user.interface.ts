@@ -4,6 +4,7 @@ export interface IResponseUser {
   username: string;
   email: string;
   confirmed: boolean;
+  accountSetup: boolean;
   createdAt: string;
   updatedAt: string;
 }

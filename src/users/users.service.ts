@@ -144,4 +144,11 @@ export class UsersService {
 
     await this.commonService.saveEntity(this.usersRepository, user);
   }
+
+  public async finishAccountSetup(userId: number): Promise<void> {
+    const user = await this.findOneById(userId);
+    user.accountSetup = true;
+
+    await this.commonService.saveEntity(this.usersRepository, user);
+  }
 }

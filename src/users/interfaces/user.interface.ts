@@ -5,6 +5,7 @@ export interface IUser {
   email: string;
   password: string;
   confirmed: boolean;
+  accountSetup: boolean;
   createdAt: string;
   updatedAt: string;
 }

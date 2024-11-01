@@ -12,9 +12,10 @@ import {
   SLUG_REGEX,
 } from 'src/common/utils/regex.const';
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { IUser } from '../interfaces/user.interface';
 
 @Entity({ name: 'users' })
-export class UserEntity {
+export class UserEntity implements IUser {
   @PrimaryGeneratedColumn()
   public id: number;
 
@@ -50,6 +51,10 @@ export class UserEntity {
   @Column({ name: 'confirmed', default: false })
   @IsBoolean()
   public confirmed: boolean;
+
+  @Column({ name: 'account_setup', default: false })
+  @IsBoolean()
+  public accountSetup: boolean;
 
   @Column({ name: 'created_at' })
   public createdAt: string;

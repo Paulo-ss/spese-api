@@ -7,6 +7,7 @@ export class UserDto implements IResponseUser {
   public username: string;
   public email: string;
   public confirmed: boolean;
+  public accountSetup: boolean;
   public createdAt: string;
   public updatedAt: string;
 
@@ -21,6 +22,7 @@ export class UserDto implements IResponseUser {
       username: user.username,
       email: user.email,
       confirmed: user.confirmed,
+      accountSetup: user.accountSetup,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     });

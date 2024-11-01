@@ -5,9 +5,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { IncomeEntity } from './entities/income.entity';
 import { WageEntity } from './entities/wage.entity';
 import { WageService } from './wage.service';
+import { UsersModule } from 'src/users/users.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([IncomeEntity, WageEntity])],
+  imports: [TypeOrmModule.forFeature([IncomeEntity, WageEntity]), UsersModule],
   controllers: [IncomeController],
   providers: [IncomeService, WageService],
   exports: [IncomeService, WageService],
