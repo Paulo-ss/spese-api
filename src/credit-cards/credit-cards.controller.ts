@@ -49,6 +49,14 @@ export class CreditCardsController {
     return this.creditCardsService.create(creditCard, userId);
   }
 
+  @Post('create-multiple')
+  public async createMultipleCreditCards(
+    @Body() creditCards: CreateCreditCardDto[],
+    @CurrentUser() userId: number,
+  ) {
+    return this.creditCardsService.createMultiple(creditCards, userId);
+  }
+
   @Put(':id')
   public async updateCreditCard(
     @Body() creditCard: UpdateCreditCardDto,

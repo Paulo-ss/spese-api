@@ -40,6 +40,31 @@ export class CategoryService {
     return category;
   }
 
+  public async createMultiple(
+    categoriesDto: PersistCategoryDto[],
+    userId: number,
+  ): Promise<IGenericMessageResponse> {
+    const categories: CategoryEntity[] = [];
+
+    for (const category of categoriesDto) {
+      categories.push(
+        this.categoryRepository.create({
+          name: category.name,
+          userId,
+        }),
+      );
+    }
+
+    await this.commonService.saveMultipleEntities(
+      this.categoryRepository,
+      categories,
+    );
+
+    return this.commonService.generateGenericMessageResponse(
+      'Categorias criadas com sucesso.',
+    );
+  }
+
   public async update(
     id: number,
     categoryDto: PersistCategoryDto,

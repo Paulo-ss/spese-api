@@ -141,6 +141,31 @@ export class CreditCardsService {
     return newCredtiCard;
   }
 
+  public async createMultiple(
+    creditCards: CreateCreditCardDto[],
+    userId: number,
+  ): Promise<IGenericMessageResponse> {
+    const newCredtiCards: CreditCardEntity[] = [];
+
+    for (const cc of creditCards) {
+      newCredtiCards.push(
+        this.creditCardRepository.create({
+          ...cc,
+          userId,
+        }),
+      );
+    }
+
+    await this.commonService.saveMultipleEntities(
+      this.creditCardRepository,
+      newCredtiCards,
+    );
+
+    return this.commonService.generateGenericMessageResponse(
+      'Cartões de Crédito registrados com sucesso.',
+    );
+  }
+
   public async update(
     updateCreditCardDto: UpdateCreditCardDto,
     creditCardId: number,

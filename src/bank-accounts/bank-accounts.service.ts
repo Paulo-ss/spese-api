@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import { CreateBankAccountDto } from './dto/create-bank-account.dto';
 import { CommonService } from 'src/common/common.service';
 import { UpdateBankAccountDto } from './dto/update-bank-account.dto';
+import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
 
 @Injectable()
 export class BankAccountsService {
@@ -55,6 +56,32 @@ export class BankAccountsService {
     );
 
     return newBankAccount;
+  }
+
+  public async createMultiple(
+    bankAccounts: CreateBankAccountDto[],
+    userId: number,
+  ): Promise<IGenericMessageResponse> {
+    const accounts: BankAccountEntity[] = [];
+
+    for (const bankAccount of bankAccounts) {
+      accounts.push(
+        this.bankAccountRepository.create({
+          bank: bankAccount.bank,
+          currentBalance: bankAccount.currentBalance,
+          userId: userId,
+        }),
+      );
+    }
+
+    await this.commonService.saveMultipleEntities(
+      this.bankAccountRepository,
+      accounts,
+    );
+
+    return this.commonService.generateGenericMessageResponse(
+      'Contas bancárias registradas com sucesso.',
+    );
   }
 
   public async update(

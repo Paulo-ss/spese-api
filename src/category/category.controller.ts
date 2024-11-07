@@ -40,6 +40,14 @@ export class CategoryController {
     return this.categoryService.create(category, userId);
   }
 
+  @Post('create-multiple')
+  public async createMultiple(
+    @Body() categories: PersistCategoryDto[],
+    @CurrentUser() userId: number,
+  ) {
+    return this.categoryService.createMultiple(categories, userId);
+  }
+
   @Put(':id')
   public async update(
     @Param('id', ParseIntPipe) id: number,

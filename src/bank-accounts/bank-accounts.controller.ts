@@ -9,9 +9,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { BankAccountsService } from './bank-accounts.service';
-import { MessagePattern } from '@nestjs/microservices';
-import { FindByIdAndUserIdDto } from 'src/common/dto/find-by-id-and-user-id.dto';
-import { BankAccountEntity } from './entities/bank.entity';
 import { CreateBankAccountDto } from './dto/create-bank-account.dto';
 import { UpdateBankAccountDto } from './dto/update-bank-account.dto';
 import { IsAuthenticatedGuard } from 'src/guards/is-authenticated.guard';
@@ -41,6 +38,14 @@ export class BankAccountsController {
     @CurrentUser() userId: number,
   ) {
     return await this.bankAccountsService.create(bankAccount, userId);
+  }
+
+  @Post('create-multiple')
+  public async createMultiple(
+    @Body() bankAccounts: CreateBankAccountDto[],
+    @CurrentUser() userId: number,
+  ) {
+    return await this.bankAccountsService.createMultiple(bankAccounts, userId);
   }
 
   @Put(':id')
