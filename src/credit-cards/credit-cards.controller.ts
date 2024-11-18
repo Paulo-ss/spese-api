@@ -18,6 +18,7 @@ import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
 import { IsAuthenticatedGuard } from 'src/guards/is-authenticated.guard';
 import { CurrentUser } from 'src/decorators/current-user.decorator';
+import { SimplifiedCreditCardDto } from './dto/simplified-credit-card.dto';
 
 @UseGuards(IsAuthenticatedGuard)
 @Controller('credit-card')
@@ -38,7 +39,13 @@ export class CreditCardsController {
 
   @Get('all/user')
   public async findCreditCardByUserId(@CurrentUser() userId: number) {
-    return await this.creditCardsService.findByUserId(userId);
+    const creditCards = await this.creditCardsService.findByUserId(userId);
+
+    console.log({ creditCards });
+
+    return creditCards && creditCards.length > 0
+      ? creditCards.map(SimplifiedCreditCardDto.entityToDto)
+      : [];
   }
 
   @Post()

@@ -11,7 +11,6 @@ import { CreditCardsService } from 'src/credit-cards/credit-cards.service';
 import { BankAccountEntity } from 'src/bank-accounts/entities/bank.entity';
 import { InvoiceEntity } from 'src/credit-cards/entities/invoice.entity';
 import { isNull, isUndefined } from 'src/common/utils/validation.utils';
-import { CreateInstallmentDto } from 'src/credit-cards/dto/create-installment.dto';
 import { InvoiceStatus } from 'src/credit-cards/enums/invoice-status.enum';
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
 import { ExpenseStatus } from './enums/expense-status.enum';
