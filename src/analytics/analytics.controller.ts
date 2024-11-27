@@ -1,4 +1,11 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
 import { IMonthSummary } from './interfaces/month-summary.interface';
 import { ReportFiltersDto } from './dto/report-filters.dto';
@@ -15,6 +22,7 @@ export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 
   @Post('month-summary')
+  @HttpCode(HttpStatus.OK)
   public async getMonthSummary(
     @CurrentUser() userId: number,
     @Body() { month }: { month: string },

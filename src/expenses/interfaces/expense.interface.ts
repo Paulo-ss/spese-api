@@ -18,4 +18,5 @@ export interface IExpense {
   bankAccount?: IBankAccount;
   creditCard?: ICreditCard;
   installmentNumber?: number;
+  totalInstallments?: number;
 }

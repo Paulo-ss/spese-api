@@ -41,8 +41,6 @@ export class CreditCardsController {
   public async findCreditCardByUserId(@CurrentUser() userId: number) {
     const creditCards = await this.creditCardsService.findByUserId(userId);
 
-    console.log({ creditCards });
-
     return creditCards && creditCards.length > 0
       ? creditCards.map(SimplifiedCreditCardDto.entityToDto)
       : [];

@@ -37,6 +37,9 @@ export class ExpenseEntity implements IExpense {
   @Column({ name: 'installment_number', nullable: true })
   public installmentNumber?: number;
 
+  @Column({ name: 'total_installments', nullable: true })
+  public totalInstallments?: number;
+
   @Column({ name: 'name' })
   public name: string;
 

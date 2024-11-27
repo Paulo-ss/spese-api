@@ -267,6 +267,7 @@ export class ExpensesService {
               customCategory,
               invoice: invoices[i - 1],
               installmentNumber: i,
+              totalInstallments: installments,
               userId,
               expenseDate: invoiceDate,
             }),

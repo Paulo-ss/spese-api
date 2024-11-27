@@ -2,7 +2,6 @@ import {
   Column,
   CreateDateColumn,
   Entity,
-  ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -10,7 +9,6 @@ import {
 import { IBankAccount } from '../interfaces/bank-account.interface';
 import { Banks } from '../enums/banks.enum';
 import { ExpenseEntity } from 'src/expenses/entities/expense.entity';
-import { IExpense } from 'src/expenses/interfaces/expense.interface';
 
 @Entity({ name: 'bank_accounts' })
 export class BankAccountEntity implements IBankAccount {
