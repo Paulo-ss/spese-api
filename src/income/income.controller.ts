@@ -16,6 +16,7 @@ import { UpdateIncomeDto } from './dto/update-income.dto';
 import { PersistWageDto } from './dto/persist-wage.dto';
 import { IsAuthenticatedGuard } from 'src/guards/is-authenticated.guard';
 import { CurrentUser } from 'src/decorators/current-user.decorator';
+import { FilterIncomesDto } from './dto/filter-incomes.dto';
 
 @UseGuards(IsAuthenticatedGuard)
 @Controller('income')
@@ -31,6 +32,14 @@ export class IncomeController {
     @Param('id', ParseIntPipe) id: number,
   ) {
     return await this.incomeService.findById(id, userId);
+  }
+
+  @Post('filter')
+  public async getIncomesByFilters(
+    @CurrentUser() userId: number,
+    @Body() filters: FilterIncomesDto,
+  ) {
+    return await this.incomeService.findByFilters(userId, filters);
   }
 
   @Post()

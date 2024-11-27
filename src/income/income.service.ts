@@ -8,6 +8,7 @@ import { UpdateIncomeDto } from './dto/update-income.dto';
 import { isNull, isUndefined } from 'src/common/utils/validation.utils';
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
 import { isEmpty } from 'class-validator';
+import { FilterIncomesDto } from './dto/filter-incomes.dto';
 
 @Injectable()
 export class IncomeService {
@@ -28,6 +29,25 @@ export class IncomeService {
     this.commonService.checkEntityExistence(income, 'Renda');
 
     return income;
+  }
+
+  public async findByFilters(
+    userId: number,
+    filters: FilterIncomesDto,
+  ): Promise<IncomeEntity[]> {
+    const [month, day, year] = filters.fromDate.split('-').map(Number);
+    const [toMonth, toDay, toYear] = filters.toDate.split('-').map(Number);
+
+    const query = this.incomesRepository
+      .createQueryBuilder('in')
+      .where('in.income_month between :from and :to', {
+        from: new Date(year, month - 1, day),
+        to: new Date(toYear, toMonth - 1, toDay),
+      })
+      .andWhere('in.user_id = :userId', { userId })
+      .orderBy('in.income_month', 'DESC');
+
+    return query.getMany();
   }
 
   public async getUsersMonthTotalIncome(
