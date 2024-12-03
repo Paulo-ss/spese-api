@@ -23,6 +23,9 @@ export class SubscriptionEntity implements ISubscription {
   @ManyToOne(() => CreditCardEntity, (creditCard) => creditCard.subscriptions)
   public creditCard: CreditCardEntity;
 
+  @Column({ name: 'user_id' })
+  public userId: number;
+
   @CreateDateColumn({ name: 'created_at' })
   public createdAt: Date;
 

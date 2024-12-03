@@ -89,6 +89,18 @@ export class CreditCardsController {
     return this.invoiceService.payInvoice(id);
   }
 
+  @Get('subscription/all/user')
+  public async getSubscriptionByUser(@CurrentUser() userId: number) {
+    return this.subscriptionService.findByUser(userId);
+  }
+
+  @Get('/:creditCardId/subscription')
+  public async getSubscriptionByCreditCard(
+    @Param('creditCardId', ParseIntPipe) creditCardId: number,
+  ) {
+    return this.subscriptionService.findByCreditCard(creditCardId);
+  }
+
   @Get('subscription/:id')
   public async getSubscriptionById(@Param('id', ParseIntPipe) id: number) {
     return this.subscriptionService.findById(id);

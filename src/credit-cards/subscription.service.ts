@@ -18,10 +18,29 @@ export class SubscriptionService {
   ) {}
 
   public async findById(id: number): Promise<SubscriptionEntity> {
-    const subscription = await this.subscriptionRepository.findOneBy({ id });
+    const subscription = await this.subscriptionRepository.findOne({
+      where: { id },
+      relations: { creditCard: true },
+    });
     this.commonService.checkEntityExistence(subscription, 'Assinatura');
 
     return subscription;
+  }
+
+  public async findByUser(userId: number): Promise<SubscriptionEntity[]> {
+    return await this.subscriptionRepository.find({
+      where: { userId },
+      relations: { creditCard: true },
+    });
+  }
+
+  public async findByCreditCard(
+    creditCardId: number,
+  ): Promise<SubscriptionEntity[]> {
+    return await this.subscriptionRepository.find({
+      where: { creditCard: { id: creditCardId } },
+      relations: { creditCard: true },
+    });
   }
 
   public async create(
@@ -36,6 +55,7 @@ export class SubscriptionService {
     const newSubscription = this.subscriptionRepository.create({
       ...subscription,
       creditCard,
+      userId,
     });
 
     await this.commonService.saveEntity(

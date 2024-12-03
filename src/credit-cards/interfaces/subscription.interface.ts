@@ -5,6 +5,7 @@ export interface ISubscription {
   name: string;
   price: number;
   creditCard: ICreditCard;
+  userId: number;
   createdAt: Date;
   updatedAt: Date;
 }
