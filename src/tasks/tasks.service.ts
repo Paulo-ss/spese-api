@@ -12,26 +12,28 @@ export class TasksService {
     private readonly reportsService: ReportsService,
   ) {}
 
-  @Cron(CronExpression.EVERY_DAY_AT_1AM)
+  @Cron('0 0 1 11,26 * *', { timeZone: 'America/Sao_Paulo' })
   public async closeInvoices() {
     const closedInvoices = await this.invoiceService.closeInvoices();
 
     this.notificationsDBService.emitClosedInvoicesEvent(closedInvoices);
   }
 
-  @Cron(CronExpression.EVERY_DAY_AT_2AM)
+  @Cron('0 0 1 2-4,18-20 * *', { timeZone: 'America/Sao_Paulo' })
   public async markInvoicesAsDelayed() {
     const delayedInvoices = await this.invoiceService.markInvoicesAsDelayed();
 
     this.notificationsDBService.emitDelayedInvoicesEvent(delayedInvoices);
   }
 
-  @Cron(CronExpression.EVERY_DAY_AT_3AM)
+  @Cron(CronExpression.EVERY_1ST_DAY_OF_MONTH_AT_MIDNIGHT, {
+    timeZone: 'America/Sao_Paulo',
+  })
   public async deleteOneMonthNotifications() {
     this.notificationsDBService.deleteOneMonthNotifications();
   }
 
-  @Cron(CronExpression.EVERY_DAY_AT_4AM)
+  @Cron(CronExpression.EVERY_DAY_AT_2AM, { timeZone: 'America/Sao_Paulo' })
   public async deleteReportsOlderThanOneDay() {
     await this.reportsService.deleteReportsOlderThanOneDay();
   }

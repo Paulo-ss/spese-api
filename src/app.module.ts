@@ -37,6 +37,7 @@ import { CommonModule } from './common/common.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { CategoryModule } from './category/category.module';
 import { CategoryEntity } from './category/entities/category.entity';
+import { TasksModule } from './tasks/tasks.module';
 
 @Module({
   imports: [
@@ -83,6 +84,7 @@ import { CategoryEntity } from './category/entities/category.entity';
     CommonModule,
     NotificationsModule,
     CategoryModule,
+    TasksModule,
   ],
   controllers: [
     AppController,

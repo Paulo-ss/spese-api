@@ -30,8 +30,16 @@ export class InvoiceService {
   public async findById(id: number): Promise<InvoiceEntity> {
     const invoice = await this.invoiceRepository.findOne({
       where: { id },
-      relations: { expenses: true, creditCard: true },
+      relations: {
+        expenses: { creditCard: false, bankAccount: false, invoice: false },
+      },
+      order: {
+        expenses: {
+          expenseDate: 'asc',
+        },
+      },
     });
+
     this.commonService.checkEntityExistence(invoice, 'Fatura');
 
     return invoice;
@@ -164,6 +172,34 @@ export class InvoiceService {
         this.invoiceRepository,
         invoicesToBeClosed,
       );
+
+      const nextMonth = new Date();
+      nextMonth.setMonth(new Date().getMonth() + 1);
+
+      const invoicesToBeMarkedAsCurrent = await this.invoiceRepository
+        .createQueryBuilder('in')
+        .leftJoinAndSelect('in.creditCard', 'cc')
+        .where('in.closing_date = :nextMonth', {
+          nextMonth: nextMonth.toISOString().split('T')[0],
+        })
+        .andWhere('in.status != :closed', {
+          closed: InvoiceStatus.CLOSED,
+        })
+        .andWhere('in.status != :paid', {
+          paid: InvoiceStatus.PAID,
+        })
+        .getMany();
+
+      if (invoicesToBeMarkedAsCurrent.length > 0) {
+        invoicesToBeMarkedAsCurrent.forEach(async (invoice) => {
+          invoice.status = InvoiceStatus.OPENED_CURRENT;
+        });
+
+        await this.commonService.saveMultipleEntities(
+          this.invoiceRepository,
+          invoicesToBeMarkedAsCurrent,
+        );
+      }
     }
 
     return invoicesToBeClosed.map(ClosedInvoicesDto.entityToDto);

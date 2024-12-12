@@ -25,8 +25,16 @@ export class CreditCardsService {
     const credtiCard = await this.creditCardRepository.findOne({
       where: { id: credtiCardId },
       relations: {
-        invoices: { expenses: true },
+        invoices: {
+          expenses: false,
+          creditCard: false,
+        },
         subscriptions: true,
+      },
+      order: {
+        invoices: {
+          closingDate: 'asc',
+        },
       },
     });
     this.commonService.checkEntityExistence(credtiCard, 'Cartão de crédito');

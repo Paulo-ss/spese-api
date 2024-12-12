@@ -59,7 +59,17 @@ export class SimplifiedCreditCardDto implements SimplifiedCreditCardInterface {
       );
       closingDate = new Date(year, month, creditCard.closingDay);
 
-      dueDate = getNextBusinessDay(new Date(year, month, creditCard.dueDay));
+      const closingMonth =
+        creditCard.dueDay < creditCard.closingDay
+          ? month === 11
+            ? 0
+            : month + 1
+          : month;
+      const closingYear = closingMonth < month ? year + 1 : year;
+
+      dueDate = getNextBusinessDay(
+        new Date(closingYear, closingMonth, creditCard.dueDay),
+      );
     }
 
     return new SimplifiedCreditCardDto({

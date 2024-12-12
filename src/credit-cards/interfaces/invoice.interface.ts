@@ -1,5 +1,6 @@
 import { ICreditCard } from './credit-card.interface';
 import { InvoiceStatus } from '../enums/invoice-status.enum';
+import { IExpense } from 'src/expenses/interfaces/expense.interface';
 
 export interface IInvoice {
   id: number;
@@ -8,6 +9,7 @@ export interface IInvoice {
   closingDate: Date;
   dueDate: Date;
   status: InvoiceStatus;
+  expenses: IExpense[];
   createdAt: Date;
   updatedAt: Date;
 }
