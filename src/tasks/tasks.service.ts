@@ -37,4 +37,9 @@ export class TasksService {
   public async deleteReportsOlderThanOneDay() {
     await this.reportsService.deleteReportsOlderThanOneDay();
   }
+
+  @Cron(CronExpression.EVERY_DAY_AT_3AM, { timeZone: 'America/Sao_Paulo' })
+  public async createSubscriptionExpense() {
+    await this.reportsService.deleteReportsOlderThanOneDay();
+  }
 }

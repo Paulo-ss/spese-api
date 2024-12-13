@@ -8,6 +8,7 @@ import { InvoiceService } from './invoice.service';
 import { SubscriptionService } from './subscription.service';
 import { SubscriptionEntity } from './entities/subscription.entity';
 import { ExpensesModule } from 'src/expenses/expenses.module';
+import { ExpenseEntity } from 'src/expenses/entities/expense.entity';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ExpensesModule } from 'src/expenses/expenses.module';
       CreditCardEntity,
       InvoiceEntity,
       SubscriptionEntity,
+      ExpenseEntity,
     ]),
     forwardRef(() => ExpensesModule),
   ],

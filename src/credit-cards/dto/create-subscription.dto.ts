@@ -1,4 +1,4 @@
-import { IsNumber, IsString } from 'class-validator';
+import { IsNumber, IsString, Max, Min } from 'class-validator';
 
 export class CreateSubscriptionDto {
   @IsString()
@@ -12,4 +12,9 @@ export class CreateSubscriptionDto {
 
   @IsNumber()
   public creditCardId: number;
+
+  @IsNumber()
+  @Min(1)
+  @Max(31)
+  public billingDay: number;
 }

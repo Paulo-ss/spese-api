@@ -81,7 +81,7 @@ export class AnalyticsService {
       });
     }
 
-    const { invoicesTotal, paidInvoicesTotal, creditCardSubscriptionTotal } =
+    const { invoicesTotal, paidInvoicesTotal } =
       await this.creditCardService.getUsersMonthCreditCardTotal(userId, month);
     if (invoicesTotal) {
       monthExpensesTotal += invoicesTotal;
@@ -89,10 +89,6 @@ export class AnalyticsService {
 
     if (paidInvoicesTotal) {
       monthPaidExpensesTotal += paidInvoicesTotal;
-    }
-
-    if (creditCardSubscriptionTotal) {
-      monthExpensesTotal += creditCardSubscriptionTotal;
     }
 
     const usersMonthTotalIncome =

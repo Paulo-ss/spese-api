@@ -16,12 +16,19 @@ import { getInvoiceMonth } from './utils/get-invoice-month.util';
 import { ExpensesService } from 'src/expenses/expenses.service';
 import { isNull, isUndefined } from 'src/common/utils/validation.utils';
 import { ClosedInvoicesDto } from './dto/closed-invoices.dto';
+import { ExpenseEntity } from 'src/expenses/entities/expense.entity';
+import { ExpenseType } from 'src/expenses/enums/expense-type.enum';
+import { ExpenseCategory } from 'src/expenses/enums/expense-category.enum';
+import { ExpenseStatus } from 'src/expenses/enums/expense-status.enum';
+import { IExpense } from 'src/expenses/interfaces/expense.interface';
 
 @Injectable()
 export class InvoiceService {
   constructor(
     @InjectRepository(InvoiceEntity)
     private readonly invoiceRepository: Repository<InvoiceEntity>,
+    @InjectRepository(ExpenseEntity)
+    private readonly expensesRepository: Repository<ExpenseEntity>,
     @Inject(forwardRef(() => ExpensesService))
     private readonly expenseService: ExpensesService,
     private readonly commonService: CommonService,
@@ -69,7 +76,7 @@ export class InvoiceService {
   public async create(
     createInvoiceDto: CreateInvoiceDto,
   ): Promise<InvoiceEntity> {
-    const { invoiceDate } = createInvoiceDto;
+    const { invoiceDate, creditCard } = createInvoiceDto;
 
     const closingDay = createInvoiceDto.creditCard.closingDay;
     const dueDay = createInvoiceDto.creditCard.dueDay;
@@ -95,7 +102,54 @@ export class InvoiceService {
       dueDate: getNextBusinessDay(invoiceDueDate),
     });
 
-    await this.commonService.saveEntity(this.invoiceRepository, invoice);
+    const savedInvoice = await this.commonService.saveEntity(
+      this.invoiceRepository,
+      invoice,
+    );
+
+    if (creditCard.subscriptions && creditCard.subscriptions.length > 0) {
+      const subscriptionsExpenses: IExpense[] = [];
+
+      for (const subscription of creditCard.subscriptions) {
+        const [year, month, day] = savedInvoice.closingDate
+          .toISOString()
+          .split('T')[0]
+          .split('-')
+          .map(Number);
+
+        const billingMonth = subscription.billingDay < day ? month : month - 1;
+        const billingDate = new Date(
+          year,
+          billingMonth - 1,
+          subscription.billingDay,
+        );
+
+        const expense = this.expensesRepository.create({
+          expenseType: ExpenseType.CREDIT_CARD,
+          expenseDate: billingDate,
+          userId: creditCard.userId,
+          category: ExpenseCategory.SUBSCRIPTION,
+          creditCard,
+          status: ExpenseStatus.PENDING,
+          subscription,
+          name: subscription.name,
+          price: subscription.price,
+          invoice: savedInvoice,
+        });
+
+        const updatedPrice =
+          parseFloat(String(savedInvoice.currentPrice)) +
+          Number(subscription.price);
+        await this.updatePrice(savedInvoice.id, updatedPrice);
+
+        subscriptionsExpenses.push(expense);
+      }
+
+      await this.commonService.saveMultipleEntities(
+        this.expensesRepository,
+        subscriptionsExpenses,
+      );
+    }
 
     return invoice;
   }

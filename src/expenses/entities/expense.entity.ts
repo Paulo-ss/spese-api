@@ -16,6 +16,8 @@ import { ExpenseCategory } from '../enums/expense-category.enum';
 import { IInvoice } from 'src/credit-cards/interfaces/invoice.interface';
 import { InvoiceEntity } from 'src/credit-cards/entities/invoice.entity';
 import { CategoryEntity } from 'src/category/entities/category.entity';
+import { ISubscription } from 'src/credit-cards/interfaces/subscription.interface';
+import { SubscriptionEntity } from 'src/credit-cards/entities/subscription.entity';
 
 @Entity({ name: 'expenses' })
 export class ExpenseEntity implements IExpense {
@@ -28,10 +30,15 @@ export class ExpenseEntity implements IExpense {
   @ManyToOne(() => CreditCardEntity, (creditCard) => creditCard.expenses)
   public creditCard?: ICreditCard;
 
+  @ManyToOne(() => SubscriptionEntity, (subscription) => subscription.expenses)
+  public subscription?: ISubscription;
+
   @Column('enum', { name: 'expense_type', enum: ExpenseType })
   public expenseType: ExpenseType;
 
-  @ManyToOne(() => InvoiceEntity, (invoice) => invoice.expenses)
+  @ManyToOne(() => InvoiceEntity, (invoice) => invoice.expenses, {
+    onDelete: 'SET NULL',
+  })
   public invoice?: IInvoice;
 
   @Column({ name: 'installment_number', nullable: true })
@@ -52,7 +59,7 @@ export class ExpenseEntity implements IExpense {
   @Column('enum', { name: 'category', enum: ExpenseCategory, nullable: true })
   public category?: ExpenseCategory;
 
-  @ManyToOne(() => CategoryEntity)
+  @ManyToOne(() => CategoryEntity, { onDelete: 'SET NULL' })
   public customCategory?: number;
 
   @Column({ name: 'user_id' })

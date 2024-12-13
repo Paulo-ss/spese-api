@@ -1,4 +1,4 @@
-import { IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class UpdateSubscriptionDto {
   @IsOptional()
@@ -15,4 +15,10 @@ export class UpdateSubscriptionDto {
   @IsOptional()
   @IsNumber()
   public creditCardId: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(31)
+  public billingDay: number;
 }

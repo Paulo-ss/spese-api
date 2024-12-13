@@ -16,6 +16,8 @@ import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-r
 import { ExpenseStatus } from './enums/expense-status.enum';
 import { ExpenseCategory } from './enums/expense-category.enum';
 import { getInvoiceMonth } from 'src/credit-cards/utils/get-invoice-month.util';
+import { ExpenseType } from './enums/expense-type.enum';
+import { UpdateExpenseDto } from './dto/update-expense.dto';
 
 @Injectable()
 export class ExpensesService {
@@ -33,13 +35,41 @@ export class ExpensesService {
     expenseId: number,
     userId: number,
   ): Promise<ExpenseEntity> {
-    const expense = await this.expensesRepository.findOneBy({
-      id: expenseId,
-      userId,
+    const expense = await this.expensesRepository.findOne({
+      where: {
+        id: expenseId,
+        userId,
+      },
+      relations: {
+        invoice: { creditCard: false, expenses: false },
+      },
     });
     this.commonService.checkEntityExistence(expense, 'Despesa');
 
     return expense;
+  }
+
+  public async findBySubscription(
+    subscriptionId: number,
+  ): Promise<ExpenseEntity[]> {
+    const expenses = await this.expensesRepository.find({
+      where: {
+        subscription: { id: subscriptionId },
+      },
+      relations: {
+        invoice: {
+          creditCard: false,
+          expenses: {
+            bankAccount: false,
+            creditCard: false,
+            invoice: false,
+            subscription: false,
+          },
+        },
+      },
+    });
+
+    return expenses;
   }
 
   public async findByFilters(
@@ -287,7 +317,10 @@ export class ExpensesService {
 
     const expense = this.expensesRepository.create({
       expenseType,
-      status: ExpenseStatus.PENDING,
+      status:
+        expenseType === ExpenseType.DEBIT
+          ? ExpenseStatus.PAID
+          : ExpenseStatus.PENDING,
       name,
       price,
       bankAccount,
@@ -298,6 +331,52 @@ export class ExpensesService {
       userId,
       expenseDate: new Date(expenseDate),
     });
+
+    await this.commonService.saveEntity(this.expensesRepository, expense);
+
+    return expense;
+  }
+
+  public async update(
+    expenseId: number,
+    userId: number,
+    updateDto: UpdateExpenseDto,
+  ): Promise<ExpenseEntity> {
+    const expense = await this.findById(expenseId, userId);
+
+    if (updateDto.category) {
+      expense.category = updateDto.category;
+    }
+
+    if (updateDto.customCategory) {
+      expense.customCategory = updateDto.customCategory;
+    }
+
+    if (updateDto.price) {
+      if (expense.invoice) {
+        let updatedPrice = parseFloat(String(expense.invoice.currentPrice));
+
+        if (expense.price > updateDto.price) {
+          updatedPrice -= expense.price - updateDto.price;
+        }
+
+        if (expense.price <= updateDto.price) {
+          updatedPrice += updateDto.price - expense.price;
+        }
+
+        await this.invoiceService.updatePrice(expense.invoice.id, updatedPrice);
+      }
+
+      expense.price = updateDto.price;
+    }
+
+    if (updateDto.name) {
+      expense.name = updateDto.name;
+    }
+
+    if (updateDto.expenseDate) {
+      expense.expenseDate = new Date(updateDto.expenseDate);
+    }
 
     await this.commonService.saveEntity(this.expensesRepository, expense);
 
@@ -318,6 +397,13 @@ export class ExpensesService {
     userId: number,
   ): Promise<IGenericMessageResponse> {
     const expense = await this.findById(id, userId);
+
+    if (expense.invoice) {
+      const updatedPrice =
+        parseFloat(String(expense.invoice.currentPrice)) - expense.price;
+
+      await this.invoiceService.updatePrice(expense.invoice.id, updatedPrice);
+    }
 
     await this.commonService.removeEntity(this.expensesRepository, expense);
 

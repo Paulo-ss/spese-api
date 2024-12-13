@@ -7,6 +7,8 @@ import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
 import { CreditCardsService } from './credit-cards.service';
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
+import { ExpensesService } from 'src/expenses/expenses.service';
+import { InvoiceStatus } from './enums/invoice-status.enum';
 
 @Injectable()
 export class SubscriptionService {
@@ -15,12 +17,21 @@ export class SubscriptionService {
     private readonly subscriptionRepository: Repository<SubscriptionEntity>,
     @Inject() private readonly creditCardService: CreditCardsService,
     private readonly commonService: CommonService,
+    private readonly expensesService: ExpensesService,
   ) {}
 
   public async findById(id: number): Promise<SubscriptionEntity> {
     const subscription = await this.subscriptionRepository.findOne({
       where: { id },
-      relations: { creditCard: true },
+      relations: {
+        creditCard: true,
+        expenses: {
+          creditCard: false,
+          bankAccount: false,
+          subscription: false,
+          invoice: { creditCard: false, expenses: false },
+        },
+      },
     });
     this.commonService.checkEntityExistence(subscription, 'Assinatura');
 
@@ -76,6 +87,7 @@ export class SubscriptionService {
     const creditCard = dto.creditCardId
       ? await this.creditCardService.findById(dto.creditCardId, userId)
       : null;
+
     if (creditCard) {
       subscription.creditCard = creditCard;
     }
@@ -88,10 +100,32 @@ export class SubscriptionService {
       subscription.price = dto.price;
     }
 
+    if (dto.billingDay) {
+      subscription.billingDay = dto.billingDay;
+    }
+
     await this.commonService.saveEntity(
       this.subscriptionRepository,
       subscription,
     );
+
+    const subscriptionExpenses =
+      await this.expensesService.findBySubscription(id);
+
+    if (subscriptionExpenses.length > 0) {
+      for (const expense of subscriptionExpenses) {
+        const [year, month] = `${expense.expenseDate}`.split('-').map(Number);
+        const newExpenseDate = new Date(year, month - 1, dto.billingDay)
+          .toLocaleDateString('en')
+          .replaceAll('/', '-');
+
+        await this.expensesService.update(expense.id, userId, {
+          expenseDate: newExpenseDate,
+          name: dto.name,
+          price: dto.price,
+        });
+      }
+    }
 
     return subscription;
   }
@@ -103,6 +137,17 @@ export class SubscriptionService {
       this.subscriptionRepository,
       subscription,
     );
+
+    const subscriptionExpenses =
+      await this.expensesService.findBySubscription(id);
+
+    if (subscriptionExpenses.length > 0) {
+      for (const expense of subscriptionExpenses) {
+        if (expense.invoice.status === InvoiceStatus.OPENED_FUTURE) {
+          await this.expensesService.delete(expense.id, expense.userId);
+        }
+      }
+    }
 
     return this.commonService.generateGenericMessageResponse(
       'Assinatura removida com sucesso.',
