@@ -60,13 +60,10 @@ export class AnalyticsService {
     let monthPaidExpensesTotal = 0;
     let monthExpensesTotal = 0;
 
-    const monthExpenses = await this.expensesService.findByFilters(
-      {
-        fromMonth: month,
-        userId,
-      },
-      true,
-    );
+    const monthExpenses = await this.expensesService.findByFilters({
+      fromMonth: month,
+      userId,
+    });
     if (
       !isNull(monthExpenses) &&
       !isUndefined(monthExpenses) &&
@@ -79,16 +76,6 @@ export class AnalyticsService {
 
         monthExpensesTotal += Number(expense.price);
       });
-    }
-
-    const { invoicesTotal, paidInvoicesTotal } =
-      await this.creditCardService.getUsersMonthCreditCardTotal(userId, month);
-    if (invoicesTotal) {
-      monthExpensesTotal += invoicesTotal;
-    }
-
-    if (paidInvoicesTotal) {
-      monthPaidExpensesTotal += paidInvoicesTotal;
     }
 
     const usersMonthTotalIncome =

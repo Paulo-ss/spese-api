@@ -144,6 +144,7 @@ export class ExpensesService {
 
     return query
       .andWhere('e.user_id = :userId', { userId: filters.userId })
+      .orderBy('e.expense_date', 'DESC')
       .getMany();
   }
 
@@ -193,34 +194,22 @@ export class ExpensesService {
         );
 
         let invoiceStatus: InvoiceStatus = InvoiceStatus.PAID;
+
         if (month > today.getMonth() || year > today.getFullYear()) {
           invoiceStatus = InvoiceStatus.OPENED_FUTURE;
         }
 
-        if (
-          ((month - today.getMonth() === 1 &&
-            today.getDate() >= creditCard.closingDay) ||
-            (month === today.getMonth() &&
-              today.getDate() < creditCard.closingDay)) &&
-          year === today.getFullYear()
-        ) {
+        const { month: currentInvoiceMonth, year: currentInvoiceYear } =
+          getInvoiceMonth(creditCard.closingDay, new Date());
+        if (month === currentInvoiceMonth && year === currentInvoiceYear) {
           invoiceStatus = InvoiceStatus.OPENED_CURRENT;
         }
 
         invoice = await this.invoiceService.create({
           creditCard,
-          currentPrice: price,
           invoiceDate: new Date(expenseDate),
           status: invoiceStatus,
         });
-      } else {
-        const id = invoice.id;
-        const currentPrice = invoice.currentPrice;
-
-        invoice = await this.invoiceService.updatePrice(
-          id,
-          parseFloat(String(currentPrice)) + price,
-        );
       }
 
       invoices.push(invoice);
@@ -245,37 +234,25 @@ export class ExpensesService {
             );
 
             let invoiceStatus = InvoiceStatus.PAID;
+
             if (month > today.getMonth() || year > today.getFullYear()) {
               invoiceStatus = InvoiceStatus.OPENED_FUTURE;
             }
 
-            if (
-              ((month - today.getMonth() === 1 &&
-                today.getDate() >= creditCard.closingDay) ||
-                (month === today.getMonth() &&
-                  today.getDate() < creditCard.closingDay)) &&
-              year === today.getFullYear()
-            ) {
+            const { month: currentInvoiceMonth, year: currentInvoiceYear } =
+              getInvoiceMonth(creditCard.closingDay, new Date());
+            if (month === currentInvoiceMonth && year === currentInvoiceYear) {
               invoiceStatus = InvoiceStatus.OPENED_CURRENT;
             }
 
             installmentInvoice = await this.invoiceService.create({
               creditCard,
-              currentPrice: price,
               invoiceDate: new Date(
                 nextInvoiceDate.getFullYear(),
                 nextInvoiceDate.getMonth(),
               ),
               status: invoiceStatus,
             });
-          } else {
-            const id = installmentInvoice.id;
-            const currentPrice = installmentInvoice.currentPrice;
-
-            installmentInvoice = await this.invoiceService.updatePrice(
-              id,
-              parseFloat(String(currentPrice)) + price,
-            );
           }
 
           invoices.push(installmentInvoice);
@@ -283,7 +260,10 @@ export class ExpensesService {
 
         const expenses: ExpenseEntity[] = [];
         for (let i = 1; i <= installments; i++) {
-          const invoiceDate = new Date(invoices[i - 1].closingDate);
+          const nextMonthExpenseDate = new Date(expenseDate);
+          nextMonthExpenseDate.setMonth(
+            nextMonthExpenseDate.getMonth() + i - 1,
+          );
 
           expenses.push(
             this.expensesRepository.create({
@@ -299,7 +279,8 @@ export class ExpensesService {
               installmentNumber: i,
               totalInstallments: installments,
               userId,
-              expenseDate: invoiceDate,
+              expenseDate:
+                i === 1 ? new Date(expenseDate) : nextMonthExpenseDate,
             }),
           );
         }
@@ -353,20 +334,6 @@ export class ExpensesService {
     }
 
     if (updateDto.price) {
-      if (expense.invoice) {
-        let updatedPrice = parseFloat(String(expense.invoice.currentPrice));
-
-        if (expense.price > updateDto.price) {
-          updatedPrice -= expense.price - updateDto.price;
-        }
-
-        if (expense.price <= updateDto.price) {
-          updatedPrice += updateDto.price - expense.price;
-        }
-
-        await this.invoiceService.updatePrice(expense.invoice.id, updatedPrice);
-      }
-
       expense.price = updateDto.price;
     }
 
@@ -397,13 +364,6 @@ export class ExpensesService {
     userId: number,
   ): Promise<IGenericMessageResponse> {
     const expense = await this.findById(id, userId);
-
-    if (expense.invoice) {
-      const updatedPrice =
-        parseFloat(String(expense.invoice.currentPrice)) - expense.price;
-
-      await this.invoiceService.updatePrice(expense.invoice.id, updatedPrice);
-    }
 
     await this.commonService.removeEntity(this.expensesRepository, expense);
 

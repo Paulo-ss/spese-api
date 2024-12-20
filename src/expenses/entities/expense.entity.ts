@@ -30,7 +30,11 @@ export class ExpenseEntity implements IExpense {
   @ManyToOne(() => CreditCardEntity, (creditCard) => creditCard.expenses)
   public creditCard?: ICreditCard;
 
-  @ManyToOne(() => SubscriptionEntity, (subscription) => subscription.expenses)
+  @ManyToOne(
+    () => SubscriptionEntity,
+    (subscription) => subscription.expenses,
+    { nullable: true, onDelete: 'SET NULL' },
+  )
   public subscription?: ISubscription;
 
   @Column('enum', { name: 'expense_type', enum: ExpenseType })

@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  forwardRef,
-} from '@nestjs/common';
+import { Inject, Injectable, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InvoiceEntity } from './entities/invoice.entity';
 import { Repository } from 'typeorm';
@@ -39,6 +34,7 @@ export class InvoiceService {
       where: { id },
       relations: {
         expenses: { creditCard: false, bankAccount: false, invoice: false },
+        creditCard: { expenses: false, invoices: false, subscriptions: false },
       },
       order: {
         expenses: {
@@ -64,6 +60,7 @@ export class InvoiceService {
 
     const invoice = await this.invoiceRepository
       .createQueryBuilder('invoice')
+      .leftJoinAndSelect('invoice.creditCard', 'cc')
       .where('invoice.creditCardId = :creditCardId', { creditCardId })
       .andWhere('invoice.closing_date = :date', {
         date,
@@ -98,6 +95,7 @@ export class InvoiceService {
 
     const invoice = this.invoiceRepository.create({
       ...createInvoiceDto,
+      currentPrice: 0,
       closingDate: invoiceClosingDate,
       dueDate: getNextBusinessDay(invoiceDueDate),
     });
@@ -137,11 +135,6 @@ export class InvoiceService {
           invoice: savedInvoice,
         });
 
-        const updatedPrice =
-          parseFloat(String(savedInvoice.currentPrice)) +
-          Number(subscription.price);
-        await this.updatePrice(savedInvoice.id, updatedPrice);
-
         subscriptionsExpenses.push(expense);
       }
 
@@ -150,20 +143,6 @@ export class InvoiceService {
         subscriptionsExpenses,
       );
     }
-
-    return invoice;
-  }
-
-  public async updatePrice(id: number, price: number): Promise<InvoiceEntity> {
-    const invoice = await this.findById(id);
-
-    if (invoice.status === InvoiceStatus.CLOSED) {
-      throw new BadRequestException('Essa fatura já está fechada.');
-    }
-
-    invoice.currentPrice = price;
-
-    await this.commonService.saveEntity(this.invoiceRepository, invoice);
 
     return invoice;
   }
