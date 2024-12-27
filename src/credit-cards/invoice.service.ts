@@ -9,7 +9,6 @@ import { InvoiceStatus } from './enums/invoice-status.enum';
 import { getNextBusinessDay } from './utils/get-next-business-day.util';
 import { getInvoiceMonth } from './utils/get-invoice-month.util';
 import { ExpensesService } from 'src/expenses/expenses.service';
-import { isNull, isUndefined } from 'src/common/utils/validation.utils';
 import { ClosedInvoicesDto } from './dto/closed-invoices.dto';
 import { ExpenseEntity } from 'src/expenses/entities/expense.entity';
 import { ExpenseType } from 'src/expenses/enums/expense-type.enum';
@@ -149,34 +148,23 @@ export class InvoiceService {
 
   public async payInvoice(invoiceId: number): Promise<IGenericMessageResponse> {
     const invoiceToBePaid = await this.findById(invoiceId);
-    invoiceToBePaid.status = InvoiceStatus.PAID;
 
-    await this.commonService.saveEntity(
-      this.invoiceRepository,
-      invoiceToBePaid,
-    );
+    if (
+      ![InvoiceStatus.OPENED_CURRENT, InvoiceStatus.OPENED_FUTURE].includes(
+        invoiceToBePaid.status,
+      )
+    ) {
+      invoiceToBePaid.status = InvoiceStatus.PAID;
+
+      await this.commonService.saveEntity(
+        this.invoiceRepository,
+        invoiceToBePaid,
+      );
+    }
 
     invoiceToBePaid.expenses.forEach(async (expense) => {
       await this.expenseService.payExpense(expense.id);
     });
-
-    const nextMonthInvoiceDate = new Date(invoiceToBePaid.closingDate);
-    nextMonthInvoiceDate.setMonth(nextMonthInvoiceDate.getMonth() + 1);
-    nextMonthInvoiceDate.setDate(nextMonthInvoiceDate.getDate() - 1);
-
-    const nextMonthInvoice = await this.findByMonthAndCreditCard(
-      invoiceToBePaid.creditCard.id,
-      invoiceToBePaid.creditCard.closingDay,
-      nextMonthInvoiceDate,
-    );
-
-    if (!isNull(nextMonthInvoice) && !isUndefined(nextMonthInvoice)) {
-      nextMonthInvoice.status = InvoiceStatus.OPENED_CURRENT;
-      await this.commonService.saveEntity(
-        this.invoiceRepository,
-        nextMonthInvoice,
-      );
-    }
 
     return this.commonService.generateGenericMessageResponse('Fatura paga!');
   }
