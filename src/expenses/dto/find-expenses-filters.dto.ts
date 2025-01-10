@@ -9,12 +9,17 @@ import { ExpenseCategory } from '../enums/expense-category.enum';
 import { ExpenseStatus } from '../enums/expense-status.enum';
 
 export class FindExpensesFiltersDto {
+  @IsOptional()
   @IsString()
-  public fromMonth: string;
+  public month?: string;
 
   @IsOptional()
   @IsString()
-  public toMonth?: string;
+  public fromDate?: string;
+
+  @IsOptional()
+  @IsString()
+  public toDate?: string;
 
   @IsOptional()
   @IsEnum(ExpenseCategory)

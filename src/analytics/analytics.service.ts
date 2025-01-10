@@ -61,7 +61,7 @@ export class AnalyticsService {
     let monthExpensesTotal = 0;
 
     const monthExpenses = await this.expensesService.findByFilters({
-      fromMonth: month,
+      month: month,
       userId,
     });
     if (
@@ -96,8 +96,8 @@ export class AnalyticsService {
     userId: number,
   ): Promise<IDonutChartReportResponse | null> {
     const expenses = await this.expensesService.findByFilters({
-      fromMonth: filters.fromDate,
-      toMonth: filters.toDate,
+      fromDate: filters.fromDate,
+      toDate: filters.toDate,
       userId: userId,
     });
 
@@ -201,7 +201,7 @@ export class AnalyticsService {
     const mappedMonthInvestiment = new Map<string, number>();
     for (const month of monthsRange) {
       const investiments = await this.expensesService.findByFilters({
-        fromMonth: month,
+        month: month,
         userId: userId,
         category: ExpenseCategory.INVESTIMENT,
       });

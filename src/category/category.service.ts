@@ -33,6 +33,7 @@ export class CategoryService {
   ): Promise<CategoryEntity> {
     const category = this.categoryRepository.create({
       name: categoryDto.name,
+      color: categoryDto.color,
       userId,
     });
     await this.commonService.saveEntity(this.categoryRepository, category);
@@ -50,6 +51,7 @@ export class CategoryService {
       categories.push(
         this.categoryRepository.create({
           name: category.name,
+          color: category.color,
           userId,
         }),
       );
@@ -72,6 +74,7 @@ export class CategoryService {
   ): Promise<CategoryEntity> {
     const category = await this.findById(id, userId);
     category.name = categoryDto.name;
+    category.color = categoryDto.color;
 
     await this.commonService.saveEntity(this.categoryRepository, category);
 

@@ -15,6 +15,9 @@ export class CategoryEntity implements ICategory {
   @Column({ name: 'name' })
   public name: string;
 
+  @Column({ name: 'color' })
+  public color: string;
+
   @Column({ name: 'user_id' })
   public userId: number;
 

@@ -76,26 +76,35 @@ export class ExpensesService {
     filters: FindExpensesFiltersDto,
     ignoreCreditCard = false,
   ): Promise<ExpenseEntity[]> {
-    const [fromMonth, fromYear] = filters.fromMonth.split('-').map(Number);
-    const fromDate = new Date(fromYear, fromMonth - 1);
-    const lastDayOfTheMonth = new Date(fromYear, fromMonth, 0);
-
     const query = this.expensesRepository
       .createQueryBuilder('e')
       .leftJoinAndSelect('e.bankAccount', 'ba')
       .leftJoinAndSelect('e.customCategory', 'cat')
-      .leftJoin('e.creditCard', 'cc')
-      .where('e.expense_date between :fromMonth and :nextMonth', {
-        fromMonth: fromDate,
-        nextMonth: lastDayOfTheMonth,
-      });
+      .leftJoin('e.creditCard', 'cc');
 
-    if (filters.toMonth) {
-      const [toMonth, toYear] = filters.toMonth.split('-').map(Number);
+    if (filters.month) {
+      const [fromMonth, fromYear] = filters.month.split('-').map(Number);
+      const firstDayOfTheMonth = new Date(fromYear, fromMonth - 1);
+      const lastDayOfTheMonth = new Date(fromYear, fromMonth, 0);
 
-      query.where('e.expense_date between :fromMonth and :toMonth', {
-        fromMonth: fromDate,
-        toMonth: new Date(toYear, toMonth),
+      query.where(
+        'e.expense_date between :firstDayOfTheMonth and :lastDayOfTheMonth',
+        {
+          firstDayOfTheMonth: firstDayOfTheMonth,
+          lastDayOfTheMonth: lastDayOfTheMonth,
+        },
+      );
+    }
+
+    if (filters.fromDate && filters.toDate) {
+      const [fromMonth, fromDay, fromYear] = filters.fromDate
+        .split('-')
+        .map(Number);
+      const [toMonth, toDay, toYear] = filters.toDate.split('-').map(Number);
+
+      query.where('e.expense_date between :fromDate and :toDate', {
+        fromDate: new Date(fromYear, fromMonth - 1, fromDay),
+        toDate: new Date(toYear, toMonth - 1, toDay),
       });
     }
 
