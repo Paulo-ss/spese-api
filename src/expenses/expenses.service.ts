@@ -1,7 +1,7 @@
 import { Inject, Injectable, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ExpenseEntity } from './entities/expense.entity';
-import { Repository } from 'typeorm';
+import { FindOptionsRelations, Repository } from 'typeorm';
 import { CommonService } from 'src/common/common.service';
 import { FindExpensesFiltersDto } from './dto/find-expenses-filters.dto';
 import { CreateExpenseDto } from './dto/create-expense.dto';
@@ -16,8 +16,8 @@ import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-r
 import { ExpenseStatus } from './enums/expense-status.enum';
 import { ExpenseCategory } from './enums/expense-category.enum';
 import { getInvoiceMonth } from 'src/credit-cards/utils/get-invoice-month.util';
-import { ExpenseType } from './enums/expense-type.enum';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
+import { CategoryService } from 'src/category/category.service';
 
 @Injectable()
 export class ExpensesService {
@@ -29,20 +29,23 @@ export class ExpensesService {
     private readonly bankAccountService: BankAccountsService,
     private readonly creditCardService: CreditCardsService,
     private readonly commonService: CommonService,
+    private readonly categoryService: CategoryService,
   ) {}
 
   public async findById(
     expenseId: number,
     userId: number,
+    relations: FindOptionsRelations<ExpenseEntity> = {
+      invoice: { creditCard: false, expenses: false },
+      customCategory: { expenses: false },
+    },
   ): Promise<ExpenseEntity> {
     const expense = await this.expensesRepository.findOne({
       where: {
         id: expenseId,
         userId,
       },
-      relations: {
-        invoice: { creditCard: false, expenses: false },
-      },
+      relations,
     });
     this.commonService.checkEntityExistence(expense, 'Despesa');
 
@@ -154,6 +157,7 @@ export class ExpensesService {
     return query
       .andWhere('e.user_id = :userId', { userId: filters.userId })
       .orderBy('e.expense_date', 'DESC')
+      .orderBy('cat.name', 'ASC')
       .getMany();
   }
 
@@ -167,7 +171,7 @@ export class ExpensesService {
       price,
       bankAccountId,
       category,
-      customCategory,
+      customCategory: customCategoryId,
       creditCardId,
       installments,
       expenseDate,
@@ -180,6 +184,11 @@ export class ExpensesService {
         userId,
       );
     }
+
+    const customCategory = await this.categoryService.findById(
+      customCategoryId,
+      userId,
+    );
 
     const creditCard = creditCardId
       ? await this.creditCardService.findById(creditCardId, userId)
@@ -307,10 +316,7 @@ export class ExpensesService {
 
     const expense = this.expensesRepository.create({
       expenseType,
-      status:
-        expenseType === ExpenseType.DEBIT
-          ? ExpenseStatus.PAID
-          : ExpenseStatus.PENDING,
+      status: ExpenseStatus.PENDING,
       name,
       price,
       bankAccount,
@@ -339,7 +345,11 @@ export class ExpensesService {
     }
 
     if (updateDto.customCategory) {
-      expense.customCategory = updateDto.customCategory;
+      const customCategory = await this.categoryService.findById(
+        updateDto.customCategory,
+        userId,
+      );
+      expense.customCategory = customCategory;
     }
 
     if (updateDto.price) {
@@ -348,10 +358,6 @@ export class ExpensesService {
 
     if (updateDto.name) {
       expense.name = updateDto.name;
-    }
-
-    if (updateDto.expenseDate) {
-      expense.expenseDate = new Date(updateDto.expenseDate);
     }
 
     await this.commonService.saveEntity(this.expensesRepository, expense);

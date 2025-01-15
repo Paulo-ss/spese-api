@@ -5,6 +5,7 @@ import { IBankAccount } from 'src/bank-accounts/interfaces/bank-account.interfac
 import { ExpenseCategory } from '../enums/expense-category.enum';
 import { ISubscription } from 'src/credit-cards/interfaces/subscription.interface';
 import { IInvoice } from 'src/credit-cards/interfaces/invoice.interface';
+import { ICategory } from 'src/category/interfaces/category.interface';
 
 export interface IExpense {
   id: number;
@@ -16,7 +17,7 @@ export interface IExpense {
   expenseDate: Date;
   updatedAt: Date;
   category?: ExpenseCategory;
-  customCategory?: number;
+  customCategory?: ICategory;
   bankAccount?: IBankAccount;
   creditCard?: ICreditCard;
   invoice?: IInvoice;

@@ -25,7 +25,10 @@ export class ExpensesController {
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() userId: number,
   ) {
-    return this.expensesService.findById(id, userId);
+    return this.expensesService.findById(id, userId, {
+      invoice: { creditCard: false, expenses: false },
+      customCategory: { expenses: false },
+    });
   }
 
   @Post('filter')
@@ -45,6 +48,15 @@ export class ExpensesController {
   }
 
   @Put(':id')
+  public async update(
+    @Body() expense: CreateExpenseDto,
+    @CurrentUser() userId: number,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.expensesService.update(id, userId, expense);
+  }
+
+  @Put('pay/:id')
   public async pay(@Param('id', ParseIntPipe) id: number) {
     return this.expensesService.payExpense(id);
   }

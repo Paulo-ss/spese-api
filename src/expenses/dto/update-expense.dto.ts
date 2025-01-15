@@ -32,5 +32,5 @@ export class UpdateExpenseDto {
   @Matches(DATE_MM_DD_YYYY_REGEX, {
     message: 'A data deve estar no formato MM-dd-yyyy',
   })
-  public expenseDate: string;
+  public expenseDate?: string;
 }
