@@ -47,6 +47,31 @@ export class InvoiceService {
     return invoice;
   }
 
+  public async findByMonth(
+    month: string,
+    userId: number,
+  ): Promise<InvoiceEntity[]> {
+    const [fromMonth, fromYear] = month.split('-').map(Number);
+    const firstDayOfTheMonth = new Date(fromYear, fromMonth - 1);
+    const lastDayOfTheMonth = new Date(fromYear, fromMonth, 0);
+
+    const invoice = await this.invoiceRepository
+      .createQueryBuilder('invoice')
+      .where(
+        'invoice.due_date between :firstDayOfTheMonth and :lastDayOfTheMonth',
+        {
+          firstDayOfTheMonth: firstDayOfTheMonth,
+          lastDayOfTheMonth: lastDayOfTheMonth,
+        },
+      )
+      .andWhere('invoice.user_id = :userId', {
+        userId,
+      })
+      .getMany();
+
+    return invoice;
+  }
+
   public async findByMonthAndCreditCard(
     creditCardId: number,
     creditCardClosingDay: number,
@@ -97,6 +122,7 @@ export class InvoiceService {
       currentPrice: 0,
       closingDate: invoiceClosingDate,
       dueDate: getNextBusinessDay(invoiceDueDate),
+      userId: creditCard.userId,
     });
 
     const savedInvoice = await this.commonService.saveEntity(

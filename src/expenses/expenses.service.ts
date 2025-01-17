@@ -154,6 +154,10 @@ export class ExpensesService {
       query.andWhere('e.status = :status', { status: filters.status });
     }
 
+    if (filters.type) {
+      query.andWhere('e.expense_type = :type', { type: filters.type });
+    }
+
     return query
       .andWhere('e.user_id = :userId', { userId: filters.userId })
       .orderBy('e.expense_date', 'DESC')

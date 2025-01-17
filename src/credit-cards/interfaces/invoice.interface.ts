@@ -12,4 +12,5 @@ export interface IInvoice {
   expenses: IExpense[];
   createdAt: Date;
   updatedAt: Date;
+  userId: number;
 }

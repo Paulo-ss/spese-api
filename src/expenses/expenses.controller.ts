@@ -28,6 +28,11 @@ export class ExpensesController {
     return this.expensesService.findById(id, userId, {
       invoice: { creditCard: false, expenses: false },
       customCategory: { expenses: false },
+      creditCard: {
+        expenses: false,
+        subscriptions: false,
+      },
+      bankAccount: { expenses: false },
     });
   }
 

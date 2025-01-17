@@ -35,6 +35,9 @@ export class CreditCardEntity implements ICreditCard {
   @Column({ name: 'user_id' })
   public userId: number;
 
+  @Column({ name: 'last_four_digits' })
+  public lastFourDigits: string;
+
   @OneToMany(() => InvoiceEntity, (invoice) => invoice.creditCard)
   public invoices?: InvoiceEntity[];
 

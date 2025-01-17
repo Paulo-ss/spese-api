@@ -13,14 +13,29 @@ import {
   IDonutChartReportResponse,
 } from './interfaces/reports-responses.interface';
 import { ExpenseCategory } from 'src/expenses/enums/expense-category.enum';
+import {
+  ICashFlowResponse,
+  TCashFlowByDay,
+} from './interfaces/cash-flow.interface';
+import { ExpenseType } from 'src/expenses/enums/expense-type.enum';
+import { BankAccountsService } from 'src/bank-accounts/bank-accounts.service';
+import { InvoiceService } from 'src/credit-cards/invoice.service';
+import { CalendarEventType } from './enums/calendar-event-type.enum';
+import getDatesBetween from 'src/credit-cards/utils/get-dates-between.util';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { EntityManager } from 'typeorm';
 
 @Injectable()
 export class AnalyticsService {
   constructor(
+    @InjectEntityManager()
+    private readonly entityManager: EntityManager,
     private readonly incomeService: IncomeService,
     private readonly wageService: WageService,
     private readonly expensesService: ExpensesService,
     private readonly creditCardService: CreditCardsService,
+    private readonly invoiceService: InvoiceService,
+    private readonly bankAccountsService: BankAccountsService,
   ) {}
 
   private static generateMonthsRange(
@@ -80,8 +95,12 @@ export class AnalyticsService {
 
     const usersMonthTotalIncome =
       await this.incomeService.getUsersMonthTotalIncome(userId, month);
-    const userWage = Number((await this.wageService.findByUserId(userId)).wage);
-    const budget = usersMonthTotalIncome + userWage;
+    const allUserWages = await this.wageService.findByUserId(userId);
+    const totalUserWage = allUserWages.reduce(
+      (total, { wage }) => total + Number(wage),
+      0,
+    );
+    const budget = usersMonthTotalIncome + totalUserWage;
 
     return {
       budget,
@@ -220,5 +239,38 @@ export class AnalyticsService {
       categories: Array.from(mappedMonthInvestiment.keys()),
       series: [{ data: Array.from(mappedMonthInvestiment.values()) }],
     };
+  }
+
+  public async getCashFlowByMonth(date: string, userId: number) {
+    const [month, year] = date.split('-').map(Number);
+    const firstDayOfTheMonth = new Date(year, month - 1)
+      .toISOString()
+      .split('T')[0];
+    const lastDayOfTheMonth = new Date(year, month, 0)
+      .toISOString()
+      .split('T')[0];
+
+    try {
+      const results = await this.entityManager.query(`
+          select cashFlow.* from (
+      (select ex.name as name, ex.price as price, ex.expense_date as date, 'EXPENSE' as type
+          from expenses ex
+          where (ex.expense_date between '${firstDayOfTheMonth}' and '${lastDayOfTheMonth}') and ex.expense_type = 'debit' and ex.user_id = ${userId}
+      ) union all
+        (select inc.name, inc.value, inc.income_month, 'INCOME' as type
+          from incomes inc
+          where inc.income_month between '${firstDayOfTheMonth}' and '${lastDayOfTheMonth}' and inc.user_id = ${userId}
+      ) union all
+        (select ('Fatura ' || cc.nickname || ' ' || cc.last_four_digits), inv.current_price, inv.due_date, 'EXPENSE' as type
+          from invoices inv
+          left join credit_cards cc on inv."creditCardId" = cc.id
+          where inv.due_date between '${firstDayOfTheMonth}' and '${lastDayOfTheMonth}' and inv.user_id = ${userId})
+  ) cashFlow;
+      `);
+
+      console.log({ results });
+    } catch (error) {
+      console.log({ error });
+    }
   }
 }

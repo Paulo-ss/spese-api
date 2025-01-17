@@ -7,6 +7,7 @@ import {
 } from 'class-validator';
 import { ExpenseCategory } from '../enums/expense-category.enum';
 import { ExpenseStatus } from '../enums/expense-status.enum';
+import { ExpenseType } from '../enums/expense-type.enum';
 
 export class FindExpensesFiltersDto {
   @IsOptional()
@@ -48,4 +49,8 @@ export class FindExpensesFiltersDto {
   @IsOptional()
   @IsNumber()
   public userId: number;
+
+  @IsOptional()
+  @IsEnum(ExpenseType)
+  public type?: ExpenseType;
 }

@@ -15,7 +15,10 @@ export class WageEntity implements IWage {
   @Column('decimal', { name: 'wage', precision: 10, scale: 2 })
   public wage: number;
 
-  @Column({ name: 'user_id', unique: true })
+  @Column({ name: 'paymment_day' })
+  public paymmentDay: number;
+
+  @Column({ name: 'user_id' })
   public userId: number;
 
   @CreateDateColumn({ name: 'created_at' })

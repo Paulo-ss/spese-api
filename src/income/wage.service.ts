@@ -15,8 +15,15 @@ export class WageService {
     private readonly commonService: CommonService,
   ) {}
 
-  public async findByUserId(userId: number): Promise<WageEntity> {
+  public async findById(id: number, userId: number): Promise<WageEntity> {
     const wage = await this.wageRepository.findOneBy({ userId });
+    this.commonService.checkEntityExistence(wage, 'Salário');
+
+    return wage;
+  }
+
+  public async findByUserId(userId: number): Promise<WageEntity[]> {
+    const wage = await this.wageRepository.findBy({ userId });
     this.commonService.checkEntityExistence(wage, 'Salário');
 
     return wage;
@@ -35,11 +42,13 @@ export class WageService {
   }
 
   public async update(
-    { wage }: PersistWageDto,
+    id: number,
+    { wage, paymmentDay }: PersistWageDto,
     userId: number,
   ): Promise<WageEntity> {
-    const wageToBeUpdated = await this.findByUserId(userId);
+    const wageToBeUpdated = await this.findById(id, userId);
     wageToBeUpdated.wage = wage;
+    wageToBeUpdated.paymmentDay = paymmentDay;
 
     const updatedAge = await this.commonService.saveEntity(
       this.wageRepository,

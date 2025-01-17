@@ -5,6 +5,7 @@ export interface SimplifiedCreditCardInterface {
   nickname: string;
   currentMonthInvoiceTotal: number;
   otherMonthsTotal: number;
+  lastFourDigits: string;
   closedTotal: number;
   bank: Banks;
   closingDate: Date;

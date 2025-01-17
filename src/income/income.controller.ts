@@ -67,6 +67,14 @@ export class IncomeController {
     return await this.incomeService.delete(id, userId);
   }
 
+  @Get('wage/:id')
+  public async getWageById(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() userId: number,
+  ) {
+    return this.wageService.findById(id, userId);
+  }
+
   @Get('wage/user')
   public async getWageByUserId(@CurrentUser() userId: number) {
     return this.wageService.findByUserId(userId);
@@ -80,11 +88,12 @@ export class IncomeController {
     return await this.wageService.create(wage, userId);
   }
 
-  @Put('wage/user')
+  @Put('wage/:id')
   public async updateWage(
+    @Param('id', ParseIntPipe) id: number,
     @Body() wage: PersistWageDto,
     @CurrentUser() userId: number,
   ) {
-    return await this.wageService.update(wage, userId);
+    return await this.wageService.update(id, wage, userId);
   }
 }

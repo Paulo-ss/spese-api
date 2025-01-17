@@ -9,6 +9,7 @@ export interface ICreditCard {
   userId: number;
   dueDay: number;
   closingDay: number;
+  lastFourDigits: string;
   createdAt: Date;
   updatedAt: Date;
   limit?: number;

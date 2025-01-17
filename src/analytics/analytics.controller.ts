@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
@@ -60,5 +61,13 @@ export class AnalyticsController {
     @CurrentUser() userId: number,
   ): Promise<IBarChartReportResponse> {
     return this.analyticsService.getInvestimentsXMonthReport(filters, userId);
+  }
+
+  @Get('cash-flow')
+  public async getCashFlowByMonth(
+    @Body() filters: { date: string },
+    @CurrentUser() userId: number,
+  ) {
+    return this.analyticsService.getCashFlowByMonth(filters.date, userId);
   }
 }

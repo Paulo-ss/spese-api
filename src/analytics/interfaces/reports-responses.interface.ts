@@ -1,5 +1,5 @@
 export interface IBarChartReportResponse {
-  series: { name?: string; data: string | number[] }[];
+  series: { name?: string; data: number[] }[];
   categories: string[];
 }
 

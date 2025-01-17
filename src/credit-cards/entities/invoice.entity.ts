@@ -44,4 +44,7 @@ export class InvoiceEntity implements IInvoice {
 
   @UpdateDateColumn({ name: 'updated_at' })
   public updatedAt: Date;
+
+  @Column({ name: 'user_id' })
+  public userId: number;
 }

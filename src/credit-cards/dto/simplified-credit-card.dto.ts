@@ -11,6 +11,7 @@ export class SimplifiedCreditCardDto implements SimplifiedCreditCardInterface {
   public closingDate: Date;
   public dueDate: Date;
   public currentMonthInvoiceTotal: number;
+  public lastFourDigits: string;
   public otherMonthsTotal: number;
   public closedTotal: number;
   public limit: number;
@@ -74,6 +75,7 @@ export class SimplifiedCreditCardDto implements SimplifiedCreditCardInterface {
       closedTotal,
       limit: creditCard.limit,
       nickname: creditCard.nickname,
+      lastFourDigits: creditCard.lastFourDigits,
     });
   }
 }
