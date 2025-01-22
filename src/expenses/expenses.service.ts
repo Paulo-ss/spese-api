@@ -18,6 +18,7 @@ import { ExpenseCategory } from './enums/expense-category.enum';
 import { getInvoiceMonth } from 'src/credit-cards/utils/get-invoice-month.util';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { CategoryService } from 'src/category/category.service';
+import { ExpenseType } from './enums/expense-type.enum';
 
 @Injectable()
 export class ExpensesService {
@@ -161,7 +162,7 @@ export class ExpensesService {
     return query
       .andWhere('e.user_id = :userId', { userId: filters.userId })
       .orderBy('e.expense_date', 'DESC')
-      .orderBy('cat.name', 'ASC')
+      .addOrderBy('cat.name', 'ASC')
       .getMany();
   }
 
@@ -192,6 +193,7 @@ export class ExpensesService {
     const customCategory = await this.categoryService.findById(
       customCategoryId,
       userId,
+      false,
     );
 
     const creditCard = creditCardId
@@ -296,7 +298,7 @@ export class ExpensesService {
               bankAccount,
               creditCard,
               category,
-              customCategory,
+              customCategory: customCategoryId ? customCategory : null,
               invoice: invoices[i - 1],
               installmentNumber: i,
               totalInstallments: installments,
@@ -320,13 +322,17 @@ export class ExpensesService {
 
     const expense = this.expensesRepository.create({
       expenseType,
-      status: ExpenseStatus.PENDING,
+      status:
+        new Date(expenseDate) === new Date() &&
+        expenseType === ExpenseType.DEBIT
+          ? ExpenseStatus.PAID
+          : ExpenseStatus.PENDING,
       name,
       price,
       bankAccount,
       creditCard,
       category,
-      customCategory,
+      customCategory: customCategoryId ? customCategory : null,
       invoice: invoices[0],
       userId,
       expenseDate: new Date(expenseDate),

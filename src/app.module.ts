@@ -38,6 +38,9 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { CategoryModule } from './category/category.module';
 import { CategoryEntity } from './category/entities/category.entity';
 import { TasksModule } from './tasks/tasks.module';
+import { CashFlowModule } from './cash-flow/cash-flow.module';
+import { CashFlowDailyEntity } from './cash-flow/entities/cash-flow-daily.entity';
+import { CashFlowTransactionEntity } from './cash-flow/entities/cash-flow-transactions.entity';
 
 @Module({
   imports: [
@@ -62,6 +65,8 @@ import { TasksModule } from './tasks/tasks.module';
         ReportEntity,
         NotificationEntity,
         CategoryEntity,
+        CashFlowDailyEntity,
+        CashFlowTransactionEntity,
       ],
       synchronize: !JSON.parse(process.env.IS_PRODUCTION),
     }),
@@ -85,6 +90,7 @@ import { TasksModule } from './tasks/tasks.module';
     NotificationsModule,
     CategoryModule,
     TasksModule,
+    CashFlowModule,
   ],
   controllers: [
     AppController,

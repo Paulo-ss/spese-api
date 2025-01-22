@@ -1,4 +1,5 @@
-import { IsNumber, Max, Min } from 'class-validator';
+import { IsEnum, IsNumber, IsOptional, Max, Min } from 'class-validator';
+import { WageBusinessDay } from '../enums/wage-business-day.enum';
 
 export class PersistWageDto {
   @IsNumber(
@@ -11,4 +12,8 @@ export class PersistWageDto {
   @Min(1, { message: 'Informe um número entre 1 a 31' })
   @Max(31, { message: 'Informe um número entre 1 a 31' })
   public paymmentDay: number;
+
+  @IsOptional()
+  @IsEnum(WageBusinessDay)
+  public businessDay?: WageBusinessDay;
 }

@@ -9,6 +9,7 @@ import { SubscriptionService } from './subscription.service';
 import { SubscriptionEntity } from './entities/subscription.entity';
 import { ExpensesModule } from 'src/expenses/expenses.module';
 import { ExpenseEntity } from 'src/expenses/entities/expense.entity';
+import { BankAccountsModule } from 'src/bank-accounts/bank-accounts.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ExpenseEntity } from 'src/expenses/entities/expense.entity';
       ExpenseEntity,
     ]),
     forwardRef(() => ExpensesModule),
+    BankAccountsModule,
   ],
   controllers: [CreditCardsController],
   providers: [CreditCardsService, InvoiceService, SubscriptionService],

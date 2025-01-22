@@ -39,7 +39,7 @@ export class IncomeController {
     @CurrentUser() userId: number,
     @Body() filters: FilterIncomesDto,
   ) {
-    return await this.incomeService.findByFilters(userId, filters);
+    return await this.incomeService.findByFilters({ ...filters, userId });
   }
 
   @Post()
@@ -86,6 +86,14 @@ export class IncomeController {
     @CurrentUser() userId: number,
   ) {
     return await this.wageService.create(wage, userId);
+  }
+
+  @Post('wage/multiple')
+  public async createMultipleWages(
+    @Body() wages: PersistWageDto[],
+    @CurrentUser() userId: number,
+  ) {
+    return await this.wageService.createMultiple(wages, userId);
   }
 
   @Put('wage/:id')

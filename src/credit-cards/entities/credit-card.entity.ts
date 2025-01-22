@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -11,6 +12,8 @@ import { Banks } from 'src/bank-accounts/enums/banks.enum';
 import { InvoiceEntity } from './invoice.entity';
 import { ExpenseEntity } from 'src/expenses/entities/expense.entity';
 import { SubscriptionEntity } from './subscription.entity';
+import { BankAccountEntity } from 'src/bank-accounts/entities/bank.entity';
+import { IBankAccount } from 'src/bank-accounts/interfaces/bank-account.interface';
 
 @Entity({ name: 'credit_cards' })
 export class CreditCardEntity implements ICreditCard {
@@ -46,6 +49,9 @@ export class CreditCardEntity implements ICreditCard {
     (subscription) => subscription.creditCard,
   )
   public subscriptions?: SubscriptionEntity[];
+
+  @ManyToOne(() => BankAccountEntity, { nullable: true })
+  public bankAccount?: IBankAccount;
 
   @OneToMany(() => ExpenseEntity, (expense) => expense.creditCard)
   public expenses?: ExpenseEntity[];

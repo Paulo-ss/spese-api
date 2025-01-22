@@ -1,4 +1,4 @@
-import { Matches } from 'class-validator';
+import { IsNumber, IsOptional, Matches } from 'class-validator';
 import { DATE_MM_DD_YYYY_REGEX } from 'src/common/utils/regex.const';
 
 export class FilterIncomesDto {
@@ -11,4 +11,12 @@ export class FilterIncomesDto {
     message: 'A data deve estar no padrão MM-dd-yyyy',
   })
   public toDate: string;
+
+  @IsOptional()
+  @IsNumber()
+  public userId?: number;
+
+  @IsOptional()
+  @IsNumber()
+  public wageId?: number;
 }

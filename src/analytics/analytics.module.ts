@@ -11,7 +11,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ReportEntity } from './entities/report.entity';
 import { ReportsController } from './reports.controller';
 import { NotificationsModule } from 'src/notifications/notifications.module';
-import { BankAccountsModule } from 'src/bank-accounts/bank-accounts.module';
 
 @Module({
   imports: [
@@ -21,7 +20,6 @@ import { BankAccountsModule } from 'src/bank-accounts/bank-accounts.module';
     ExpensesModule,
     CreditCardsModule,
     NotificationsModule,
-    BankAccountsModule,
   ],
   controllers: [AnalyticsController, ReportsController],
   providers: [AnalyticsService, ReportsJobService, ReportsService],

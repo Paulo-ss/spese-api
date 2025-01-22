@@ -14,11 +14,18 @@ export class CategoryService {
     private readonly commonService: CommonService,
   ) {}
 
-  public async findById(id: number, userId: number): Promise<CategoryEntity> {
+  public async findById(
+    id: number,
+    userId: number,
+    checkForExistence: boolean = true,
+  ): Promise<CategoryEntity> {
     const category = await this.categoryRepository.findOne({
       where: { id, userId },
     });
-    this.commonService.checkEntityExistence(category, 'Categoria');
+
+    if (checkForExistence) {
+      this.commonService.checkEntityExistence(category, 'Categoria');
+    }
 
     return category;
   }

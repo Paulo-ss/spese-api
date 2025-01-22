@@ -1,4 +1,11 @@
-import { IsEnum, IsNumber, IsString, Max, Min } from 'class-validator';
+import {
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 import { Banks } from 'src/bank-accounts/enums/banks.enum';
 
 export class CreateCreditCardDto {
@@ -25,4 +32,8 @@ export class CreateCreditCardDto {
   @Min(1)
   @Max(31)
   public dueDay: number;
+
+  @IsOptional()
+  @IsNumber()
+  public bankAccountId?: number;
 }

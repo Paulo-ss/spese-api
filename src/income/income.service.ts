@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IncomeEntity } from './entities/income.entity';
 import { Repository } from 'typeorm';
@@ -9,6 +9,7 @@ import { isNull, isUndefined } from 'src/common/utils/validation.utils';
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
 import { isEmpty } from 'class-validator';
 import { FilterIncomesDto } from './dto/filter-incomes.dto';
+import { BankAccountsService } from 'src/bank-accounts/bank-accounts.service';
 
 @Injectable()
 export class IncomeService {
@@ -16,6 +17,8 @@ export class IncomeService {
     @InjectRepository(IncomeEntity)
     private readonly incomesRepository: Repository<IncomeEntity>,
     private readonly commonService: CommonService,
+    @Inject(forwardRef(() => BankAccountsService))
+    private readonly bankAccountService: BankAccountsService,
   ) {}
 
   public async findById(
@@ -32,7 +35,6 @@ export class IncomeService {
   }
 
   public async findByFilters(
-    userId: number,
     filters: FilterIncomesDto,
   ): Promise<IncomeEntity[]> {
     const [month, day, year] = filters.fromDate.split('-').map(Number);
@@ -43,9 +45,17 @@ export class IncomeService {
       .where('in.income_month between :from and :to', {
         from: new Date(year, month - 1, day),
         to: new Date(toYear, toMonth - 1, toDay),
-      })
-      .andWhere('in.user_id = :userId', { userId })
-      .orderBy('in.income_month', 'DESC');
+      });
+
+    if (filters.userId) {
+      query.andWhere('in.user_id = :userId', { userId: filters.wageId });
+    }
+
+    if (filters.wageId) {
+      query.andWhere('in.wageId = :wageId', { wageId: filters.wageId });
+    }
+
+    query.orderBy('in.income_month', 'DESC');
 
     return query.getMany();
   }
@@ -90,12 +100,55 @@ export class IncomeService {
       name: createIncome.name,
       value: createIncome.value,
       incomeMonth: new Date(year, month - 1, day),
+      bankAccount: createIncome.bankAccountId
+        ? await this.bankAccountService.findById(
+            createIncome.bankAccountId,
+            userId,
+            false,
+          )
+        : undefined,
       userId: userId,
     });
 
     await this.commonService.saveEntity(this.incomesRepository, newIncome);
 
     return newIncome;
+  }
+
+  public async createMultiple(
+    incomes: CreateIncomeDto[],
+  ): Promise<IGenericMessageResponse> {
+    const newIncomes: IncomeEntity[] = [];
+
+    for (const income of incomes) {
+      const [month, day, year] = income.incomeMonth.split('-').map(Number);
+
+      newIncomes.push(
+        this.incomesRepository.create({
+          name: income.name,
+          value: income.value,
+          incomeMonth: new Date(year, month - 1, day),
+          bankAccount: income.bankAccountId
+            ? await this.bankAccountService.findById(
+                income.bankAccountId,
+                income.userId,
+                false,
+              )
+            : undefined,
+          userId: income.userId,
+          wage: income.wage,
+        }),
+      );
+    }
+
+    await this.commonService.saveMultipleEntities(
+      this.incomesRepository,
+      newIncomes,
+    );
+
+    return this.commonService.generateGenericMessageResponse(
+      'Rendas criadas com sucesso.',
+    );
   }
 
   public async update(

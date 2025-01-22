@@ -9,6 +9,7 @@ import { isNull, isUndefined } from 'src/common/utils/validation.utils';
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
 import { isEmpty } from 'class-validator';
 import { InvoiceStatus } from './enums/invoice-status.enum';
+import { BankAccountsService } from 'src/bank-accounts/bank-accounts.service';
 
 @Injectable()
 export class CreditCardsService {
@@ -16,6 +17,7 @@ export class CreditCardsService {
     @InjectRepository(CreditCardEntity)
     private readonly creditCardRepository: Repository<CreditCardEntity>,
     private readonly commonService: CommonService,
+    private readonly bankAccountService: BankAccountsService,
   ) {}
 
   public async findById(
@@ -122,6 +124,13 @@ export class CreditCardsService {
   ): Promise<CreditCardEntity> {
     const newCredtiCard = this.creditCardRepository.create({
       ...creditCard,
+      bankAccount: creditCard.bankAccountId
+        ? await this.bankAccountService.findById(
+            creditCard.bankAccountId,
+            userId,
+            false,
+          )
+        : undefined,
       userId,
     });
 
@@ -143,6 +152,13 @@ export class CreditCardsService {
       newCredtiCards.push(
         this.creditCardRepository.create({
           ...cc,
+          bankAccount: cc.bankAccountId
+            ? await this.bankAccountService.findById(
+                cc.bankAccountId,
+                userId,
+                false,
+              )
+            : undefined,
           userId,
         }),
       );
