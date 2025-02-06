@@ -32,6 +32,7 @@ export class CreditCardsService {
           creditCard: false,
         },
         subscriptions: { expenses: false },
+        bankAccount: { expenses: false },
       },
       order: {
         invoices: {

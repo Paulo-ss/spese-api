@@ -9,6 +9,7 @@ import {
 import { ExpenseCategory } from '../enums/expense-category.enum';
 import { ExpenseType } from '../enums/expense-type.enum';
 import { DATE_MM_DD_YYYY_REGEX } from 'src/common/utils/regex.const';
+import { ExpenseStatus } from '../enums/expense-status.enum';
 
 export class CreateExpenseDto {
   @IsOptional()
@@ -43,6 +44,10 @@ export class CreateExpenseDto {
   @IsOptional()
   @IsNumber()
   public customCategory?: number;
+
+  @IsOptional()
+  @IsEnum(ExpenseStatus)
+  public status?: ExpenseStatus;
 
   @Matches(DATE_MM_DD_YYYY_REGEX, {
     message: 'A data deve estar no formato MM-dd-yyyy',

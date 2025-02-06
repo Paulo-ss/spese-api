@@ -18,7 +18,6 @@ import { ExpenseCategory } from './enums/expense-category.enum';
 import { getInvoiceMonth } from 'src/credit-cards/utils/get-invoice-month.util';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { CategoryService } from 'src/category/category.service';
-import { ExpenseType } from './enums/expense-type.enum';
 
 @Injectable()
 export class ExpensesService {
@@ -180,6 +179,7 @@ export class ExpensesService {
       creditCardId,
       installments,
       expenseDate,
+      status,
     } = createExpenseDto;
 
     let bankAccount: BankAccountEntity = null;
@@ -199,6 +199,14 @@ export class ExpensesService {
     const creditCard = creditCardId
       ? await this.creditCardService.findById(creditCardId, userId)
       : null;
+
+    if (bankAccount === null && creditCard && creditCard.bankAccount) {
+      bankAccount = await this.bankAccountService.findById(
+        creditCard.bankAccount.id,
+        userId,
+      );
+    }
+
     let invoice: InvoiceEntity = null;
     const invoices: InvoiceEntity[] = [];
 
@@ -282,37 +290,33 @@ export class ExpensesService {
           invoices.push(installmentInvoice);
         }
 
-        const expenses: ExpenseEntity[] = [];
         for (let i = 1; i <= installments; i++) {
           const nextMonthExpenseDate = new Date(expenseDate);
           nextMonthExpenseDate.setMonth(
             nextMonthExpenseDate.getMonth() + i - 1,
           );
 
-          expenses.push(
-            this.expensesRepository.create({
-              expenseType,
-              status: ExpenseStatus.PENDING,
-              name,
-              price,
-              bankAccount,
-              creditCard,
-              category,
-              customCategory: customCategoryId ? customCategory : null,
-              invoice: invoices[i - 1],
-              installmentNumber: i,
-              totalInstallments: installments,
-              userId,
-              expenseDate:
-                i === 1 ? new Date(expenseDate) : nextMonthExpenseDate,
-            }),
+          const newExpense = this.expensesRepository.create({
+            expenseType,
+            status: ExpenseStatus.PENDING,
+            name,
+            price,
+            bankAccount,
+            creditCard,
+            category,
+            customCategory: customCategoryId ? customCategory : null,
+            invoice: invoices[i - 1],
+            installmentNumber: i,
+            totalInstallments: installments,
+            userId,
+            expenseDate: i === 1 ? new Date(expenseDate) : nextMonthExpenseDate,
+          });
+
+          await this.commonService.saveEntity(
+            this.expensesRepository,
+            newExpense,
           );
         }
-
-        await this.commonService.saveMultipleEntities(
-          this.expensesRepository,
-          expenses,
-        );
 
         return this.commonService.generateGenericMessageResponse(
           `Despesa criada com sucesso em ${installments} parcelas.`,
@@ -322,11 +326,7 @@ export class ExpensesService {
 
     const expense = this.expensesRepository.create({
       expenseType,
-      status:
-        new Date(expenseDate) === new Date() &&
-        expenseType === ExpenseType.DEBIT
-          ? ExpenseStatus.PAID
-          : ExpenseStatus.PENDING,
+      status,
       name,
       price,
       bankAccount,

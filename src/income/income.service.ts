@@ -48,7 +48,7 @@ export class IncomeService {
       });
 
     if (filters.userId) {
-      query.andWhere('in.user_id = :userId', { userId: filters.wageId });
+      query.andWhere('in.user_id = :userId', { userId: filters.userId });
     }
 
     if (filters.wageId) {
@@ -118,33 +118,26 @@ export class IncomeService {
   public async createMultiple(
     incomes: CreateIncomeDto[],
   ): Promise<IGenericMessageResponse> {
-    const newIncomes: IncomeEntity[] = [];
-
     for (const income of incomes) {
       const [month, day, year] = income.incomeMonth.split('-').map(Number);
 
-      newIncomes.push(
-        this.incomesRepository.create({
-          name: income.name,
-          value: income.value,
-          incomeMonth: new Date(year, month - 1, day),
-          bankAccount: income.bankAccountId
-            ? await this.bankAccountService.findById(
-                income.bankAccountId,
-                income.userId,
-                false,
-              )
-            : undefined,
-          userId: income.userId,
-          wage: income.wage,
-        }),
-      );
-    }
+      const newIncome = this.incomesRepository.create({
+        name: income.name,
+        value: income.value,
+        incomeMonth: new Date(year, month - 1, day),
+        bankAccount: income.bankAccountId
+          ? await this.bankAccountService.findById(
+              income.bankAccountId,
+              income.userId,
+              false,
+            )
+          : undefined,
+        userId: income.userId,
+        wage: income.wage,
+      });
 
-    await this.commonService.saveMultipleEntities(
-      this.incomesRepository,
-      newIncomes,
-    );
+      await this.commonService.saveEntity(this.incomesRepository, newIncome);
+    }
 
     return this.commonService.generateGenericMessageResponse(
       'Rendas criadas com sucesso.',
