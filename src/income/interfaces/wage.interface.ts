@@ -4,7 +4,7 @@ import { WageBusinessDay } from '../enums/wage-business-day.enum';
 export interface IWage {
   id: number;
   wage: number;
-  paymmentDay: number;
+  paymentDay: number;
   businessDay?: WageBusinessDay;
   bankAccount?: IBankAccount;
   userId: number;

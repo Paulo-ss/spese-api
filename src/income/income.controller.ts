@@ -75,7 +75,7 @@ export class IncomeController {
     return this.wageService.findById(id, userId);
   }
 
-  @Get('wage/user')
+  @Get('wage/all/user')
   public async getWageByUserId(@CurrentUser() userId: number) {
     return this.wageService.findByUserId(userId);
   }
@@ -103,5 +103,13 @@ export class IncomeController {
     @CurrentUser() userId: number,
   ) {
     return await this.wageService.update(id, wage, userId);
+  }
+
+  @Delete('wage/:id')
+  public async deleteWage(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() userId: number,
+  ) {
+    return this.wageService.delete(id, userId);
   }
 }

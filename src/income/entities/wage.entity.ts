@@ -19,15 +19,14 @@ export class WageEntity implements IWage {
   @Column('decimal', { name: 'wage', precision: 10, scale: 2 })
   public wage: number;
 
-  @Column({ name: 'paymment_day' })
-  public paymmentDay: number;
+  @Column({ name: 'payment_day' })
+  public paymentDay: number;
 
   @Column('enum', {
     name: 'business_day',
     enum: WageBusinessDay,
-    nullable: true,
   })
-  public businessDay?: WageBusinessDay;
+  public businessDay: WageBusinessDay;
 
   @ManyToOne(() => BankAccountEntity, { nullable: true })
   public bankAccount?: IBankAccount;

@@ -10,12 +10,15 @@ import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-r
 import { isEmpty } from 'class-validator';
 import { FilterIncomesDto } from './dto/filter-incomes.dto';
 import { BankAccountsService } from 'src/bank-accounts/bank-accounts.service';
+import { WageService } from './wage.service';
 
 @Injectable()
 export class IncomeService {
   constructor(
     @InjectRepository(IncomeEntity)
     private readonly incomesRepository: Repository<IncomeEntity>,
+    @Inject(forwardRef(() => WageService))
+    private readonly wageService: WageService,
     private readonly commonService: CommonService,
     @Inject(forwardRef(() => BankAccountsService))
     private readonly bankAccountService: BankAccountsService,
@@ -25,9 +28,15 @@ export class IncomeService {
     incomeId: number,
     userId: number,
   ): Promise<IncomeEntity> {
-    const income = await this.incomesRepository.findOneBy({
-      id: incomeId,
-      userId,
+    const income = await this.incomesRepository.findOne({
+      where: {
+        id: incomeId,
+        userId,
+      },
+      relations: {
+        bankAccount: { expenses: false },
+        wage: { bankAccount: false },
+      },
     });
     this.commonService.checkEntityExistence(income, 'Renda');
 
@@ -108,6 +117,9 @@ export class IncomeService {
           )
         : undefined,
       userId: userId,
+      wage: createIncome.wage
+        ? await this.wageService.findById(createIncome.wage.id, userId, false)
+        : undefined,
     });
 
     await this.commonService.saveEntity(this.incomesRepository, newIncome);
@@ -145,7 +157,7 @@ export class IncomeService {
   }
 
   public async update(
-    { name, value, incomeMonth }: UpdateIncomeDto,
+    { name, value }: UpdateIncomeDto,
     userId: number,
     incomeId: number,
   ): Promise<IncomeEntity> {
@@ -157,11 +169,6 @@ export class IncomeService {
 
     if (!isUndefined(value) && !isNull(value)) {
       income.value = value;
-    }
-
-    if (!isUndefined(incomeMonth) && !isNull(incomeMonth)) {
-      const [month, day, year] = incomeMonth.split('-').map(Number);
-      income.incomeMonth = new Date(year, month - 1, day);
     }
 
     const updatedIncome = await this.commonService.saveEntity(

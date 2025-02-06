@@ -48,11 +48,6 @@ export class TasksService {
   }
 
   @Cron(CronExpression.EVERY_DAY_AT_3AM, { timeZone: 'America/Sao_Paulo' })
-  public async createSubscriptionExpense() {
-    await this.reportsService.deleteReportsOlderThanOneDay();
-  }
-
-  @Cron(CronExpression.EVERY_DAY_AT_4AM, { timeZone: 'America/Sao_Paulo' })
   public async generateWagesIncomes() {
     await this.wageService.generateWagesIncomes();
   }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WageEntity } from './entities/wage.entity';
 import { Repository } from 'typeorm';
@@ -12,6 +12,7 @@ import { getPreviousBusinessDay } from 'src/credit-cards/utils/get-previous-busi
 import { getNextBusinessDay } from 'src/credit-cards/utils/get-next-business-day.util';
 import { CreateIncomeDto } from './dto/create-income.dto';
 import { isNotEmpty } from 'class-validator';
+import { BankAccountsService } from 'src/bank-accounts/bank-accounts.service';
 
 @Injectable()
 export class WageService {
@@ -20,12 +21,15 @@ export class WageService {
     private readonly wageRepository: Repository<WageEntity>,
     private readonly usersService: UsersService,
     private readonly commonService: CommonService,
+    @Inject(forwardRef(() => IncomeService))
     private readonly incomeService: IncomeService,
+    @Inject(forwardRef(() => BankAccountsService))
+    private readonly bankAccountService: BankAccountsService,
   ) {}
 
   private getWagePaymentDate(wage: WageEntity, date: Date): Date {
     const paymentDate = new Date(date);
-    paymentDate.setDate(wage.paymmentDay);
+    paymentDate.setDate(wage.paymentDay);
 
     return wage.businessDay
       ? wage.businessDay === WageBusinessDay.BEFORE
@@ -34,8 +38,11 @@ export class WageService {
       : paymentDate;
   }
 
-  public async findByPaymentDay(paymmentDay: number): Promise<WageEntity[]> {
-    const wages = await this.wageRepository.findBy({ paymmentDay });
+  public async findByPaymentDay(paymentDay: number): Promise<WageEntity[]> {
+    const wages = await this.wageRepository.find({
+      where: { paymentDay },
+      relations: { bankAccount: { expenses: false } },
+    });
 
     return wages;
   }
@@ -45,7 +52,10 @@ export class WageService {
     userId: number,
     checkEntityExistence = true,
   ): Promise<WageEntity> {
-    const wage = await this.wageRepository.findOneBy({ id, userId });
+    const wage = await this.wageRepository.findOne({
+      where: { id, userId },
+      relations: { bankAccount: { expenses: false } },
+    });
 
     if (checkEntityExistence) {
       this.commonService.checkEntityExistence(wage, 'Salário');
@@ -58,20 +68,26 @@ export class WageService {
     userId: number,
     checkEntityExistence = true,
   ): Promise<WageEntity[]> {
-    const wage = await this.wageRepository.findBy({ userId });
+    const wages = await this.wageRepository.find({ where: { userId } });
 
     if (checkEntityExistence) {
-      this.commonService.checkEntityExistence(wage, 'Salário');
+      this.commonService.checkEntityExistence(wages, 'Salário');
     }
 
-    return wage;
+    return wages;
   }
 
   public async create(
     wage: PersistWageDto,
     userId: number,
   ): Promise<WageEntity> {
-    const newWage = this.wageRepository.create({ ...wage, userId });
+    const newWage = this.wageRepository.create({
+      ...wage,
+      bankAccount: wage.bankAccountId
+        ? await this.bankAccountService.findById(wage.bankAccountId, userId)
+        : null,
+      userId,
+    });
 
     await this.commonService.saveEntity(this.wageRepository, newWage);
     await this.usersService.finishAccountSetup(userId);
@@ -87,7 +103,15 @@ export class WageService {
     const newWages: WageEntity[] = [];
 
     for (const wage of wages) {
-      newWages.push(this.wageRepository.create({ ...wage, userId }));
+      newWages.push(
+        this.wageRepository.create({
+          ...wage,
+          bankAccount: wage.bankAccountId
+            ? await this.bankAccountService.findById(wage.bankAccountId, userId)
+            : null,
+          userId,
+        }),
+      );
     }
 
     await this.commonService.saveMultipleEntities(
@@ -124,12 +148,11 @@ export class WageService {
 
   public async update(
     id: number,
-    { wage, paymmentDay }: PersistWageDto,
+    { wage }: PersistWageDto,
     userId: number,
   ): Promise<WageEntity> {
     const wageToBeUpdated = await this.findById(id, userId);
     wageToBeUpdated.wage = wage;
-    wageToBeUpdated.paymmentDay = paymmentDay;
 
     const updatedAge = await this.commonService.saveEntity(
       this.wageRepository,
@@ -137,6 +160,17 @@ export class WageService {
     );
 
     return updatedAge;
+  }
+
+  public async delete(
+    id: number,
+    userId: number,
+  ): Promise<IGenericMessageResponse> {
+    await this.wageRepository.delete({ id, userId });
+
+    return this.commonService.generateGenericMessageResponse(
+      'Salário deletado com sucesso.',
+    );
   }
 
   public async generateWagesIncomes() {

@@ -11,9 +11,12 @@ export class PersistWageDto {
   @IsNumber({}, { message: 'Informe um número entre 1 a 31' })
   @Min(1, { message: 'Informe um número entre 1 a 31' })
   @Max(31, { message: 'Informe um número entre 1 a 31' })
-  public paymmentDay: number;
+  public paymentDay: number;
+
+  @IsEnum(WageBusinessDay)
+  public businessDay: WageBusinessDay;
 
   @IsOptional()
-  @IsEnum(WageBusinessDay)
-  public businessDay?: WageBusinessDay;
+  @IsNumber()
+  public bankAccountId?: number;
 }
