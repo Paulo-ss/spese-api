@@ -227,7 +227,10 @@ export class ExpensesService {
 
         let invoiceStatus: InvoiceStatus = InvoiceStatus.PAID;
 
-        if (month > today.getMonth() || year > today.getFullYear()) {
+        if (
+          (month > today.getMonth() && year === today.getFullYear()) ||
+          year > today.getFullYear()
+        ) {
           invoiceStatus = InvoiceStatus.OPENED_FUTURE;
         }
 
@@ -267,7 +270,10 @@ export class ExpensesService {
 
             let invoiceStatus = InvoiceStatus.PAID;
 
-            if (month > today.getMonth() || year > today.getFullYear()) {
+            if (
+              (month > today.getMonth() && year === today.getFullYear()) ||
+              year > today.getFullYear()
+            ) {
               invoiceStatus = InvoiceStatus.OPENED_FUTURE;
             }
 
@@ -298,7 +304,10 @@ export class ExpensesService {
 
           const newExpense = this.expensesRepository.create({
             expenseType,
-            status: ExpenseStatus.PENDING,
+            status:
+              invoices[i - 1].status === InvoiceStatus.PAID
+                ? ExpenseStatus.PAID
+                : ExpenseStatus.PENDING,
             name,
             price,
             bankAccount,

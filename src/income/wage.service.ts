@@ -68,7 +68,10 @@ export class WageService {
     userId: number,
     checkEntityExistence = true,
   ): Promise<WageEntity[]> {
-    const wages = await this.wageRepository.find({ where: { userId } });
+    const wages = await this.wageRepository.find({
+      where: { userId },
+      relations: { bankAccount: { expenses: false } },
+    });
 
     if (checkEntityExistence) {
       this.commonService.checkEntityExistence(wages, 'Salário');

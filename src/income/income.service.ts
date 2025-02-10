@@ -88,6 +88,7 @@ export class IncomeService {
         to: lastDayOfTheMonth,
       })
       .andWhere('in.user_id = :userId', { userId })
+      .andWhere('in.wageId is null')
       .getMany();
 
     if (isNull(incomes) || isUndefined(incomes) || isEmpty(incomes)) {

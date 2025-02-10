@@ -28,6 +28,6 @@ export type TDailyCashFlow = {
 };
 
 export interface ICashFlowResponse {
-  currentAccountsCashBalance?: number;
+  currentAccountsBalance?: number;
   dailyCashFlow: TDailyCashFlow;
 }

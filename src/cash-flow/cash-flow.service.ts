@@ -7,12 +7,14 @@ import {
   ICashFlowResponse,
   TDailyCashFlow,
 } from './interfaces/cash-flow.interface';
+import { BankAccountsService } from 'src/bank-accounts/bank-accounts.service';
 
 @Injectable()
 export class CashFlowService {
   constructor(
     @InjectRepository(CashFlowDailyEntity)
     private readonly dailyCashFlowRepository: Repository<CashFlowDailyEntity>,
+    private readonly bankAccountService: BankAccountsService,
   ) {}
 
   public async findMonthDailyCashFlowByUserId(month: Date, userId: number) {
@@ -55,8 +57,18 @@ export class CashFlowService {
       };
     }
 
-    return {
+    const monthCashFlow: ICashFlowResponse = {
       dailyCashFlow: formattedDailyCashFlow,
     };
+
+    const userBankAccounts = await this.bankAccountService.findByUserId(userId);
+    if (userBankAccounts && userBankAccounts.length > 0) {
+      monthCashFlow.currentAccountsBalance = userBankAccounts.reduce(
+        (total, account) => total + account.currentBalance,
+        0,
+      );
+    }
+
+    return monthCashFlow;
   }
 }

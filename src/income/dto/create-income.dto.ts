@@ -1,10 +1,4 @@
-import {
-  IsInstance,
-  IsNumber,
-  IsOptional,
-  IsString,
-  Matches,
-} from 'class-validator';
+import { IsNumber, IsOptional, IsString, Matches } from 'class-validator';
 import { DATE_MM_DD_YYYY_REGEX } from 'src/common/utils/regex.const';
 import { WageEntity } from '../entities/wage.entity';
 
@@ -32,6 +26,5 @@ export class CreateIncomeDto {
   public userId?: number;
 
   @IsOptional()
-  @IsInstance(WageEntity)
   public wage?: WageEntity;
 }
