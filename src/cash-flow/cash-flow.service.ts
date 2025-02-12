@@ -64,7 +64,7 @@ export class CashFlowService {
     const userBankAccounts = await this.bankAccountService.findByUserId(userId);
     if (userBankAccounts && userBankAccounts.length > 0) {
       monthCashFlow.currentAccountsBalance = userBankAccounts.reduce(
-        (total, account) => total + account.currentBalance,
+        (total, account) => total + Number(account.currentBalance),
         0,
       );
     }
