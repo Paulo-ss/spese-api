@@ -10,15 +10,12 @@ import { getNextBusinessDay } from './utils/get-next-business-day.util';
 import { getInvoiceMonth } from './utils/get-invoice-month.util';
 import { ExpensesService } from 'src/expenses/expenses.service';
 import { ClosedInvoicesDto } from './dto/closed-invoices.dto';
-import { ExpenseEntity } from 'src/expenses/entities/expense.entity';
 
 @Injectable()
 export class InvoiceService {
   constructor(
     @InjectRepository(InvoiceEntity)
     private readonly invoiceRepository: Repository<InvoiceEntity>,
-    @InjectRepository(ExpenseEntity)
-    private readonly expensesRepository: Repository<ExpenseEntity>,
     @Inject(forwardRef(() => ExpensesService))
     private readonly expenseService: ExpensesService,
     private readonly commonService: CommonService,
@@ -116,6 +113,7 @@ export class InvoiceService {
     const invoice = this.invoiceRepository.create({
       ...createInvoiceDto,
       currentPrice: 0,
+      totalPrice: 0,
       closingDate: invoiceClosingDate,
       dueDate: getNextBusinessDay(invoiceDueDate),
       userId: creditCard.userId,

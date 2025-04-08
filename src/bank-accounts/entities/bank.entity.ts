@@ -9,6 +9,7 @@ import {
 import { IBankAccount } from '../interfaces/bank-account.interface';
 import { Banks } from '../enums/banks.enum';
 import { ExpenseEntity } from 'src/expenses/entities/expense.entity';
+import { ColumnNumericTransformer } from 'src/common/transformers/column-numeric-transformer.transformer';
 
 @Entity({ name: 'bank_accounts' })
 export class BankAccountEntity implements IBankAccount {
@@ -23,6 +24,7 @@ export class BankAccountEntity implements IBankAccount {
     precision: 10,
     scale: 2,
     nullable: true,
+    transformer: new ColumnNumericTransformer(),
   })
   public currentBalance?: number;
 

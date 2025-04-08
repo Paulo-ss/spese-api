@@ -11,6 +11,7 @@ import { IInvoice } from '../interfaces/invoice.interface';
 import { CreditCardEntity } from './credit-card.entity';
 import { ExpenseEntity } from 'src/expenses/entities/expense.entity';
 import { InvoiceStatus } from '../enums/invoice-status.enum';
+import { ColumnNumericTransformer } from 'src/common/transformers/column-numeric-transformer.transformer';
 
 @Entity({ name: 'invoices' })
 export class InvoiceEntity implements IInvoice {
@@ -21,8 +22,17 @@ export class InvoiceEntity implements IInvoice {
     name: 'current_price',
     precision: 10,
     scale: 2,
+    transformer: new ColumnNumericTransformer(),
   })
   public currentPrice: number;
+
+  @Column('decimal', {
+    name: 'total_price',
+    precision: 10,
+    scale: 2,
+    transformer: new ColumnNumericTransformer(),
+  })
+  public totalPrice: number;
 
   @Column('date', { name: 'closing_date' })
   public closingDate: Date;
