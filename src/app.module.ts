@@ -44,6 +44,7 @@ import { CashFlowTransactionEntity } from './cash-flow/entities/cash-flow-transa
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true, validationSchema, load: [config] }),
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.POSTGRES_HOST,
@@ -78,7 +79,6 @@ import { CashFlowTransactionEntity } from './cash-flow/entities/cash-flow-transa
         password: process.env.REDIS_PASSWORD,
       },
     }),
-    ConfigModule.forRoot({ isGlobal: true, validationSchema, load: [config] }),
     UsersModule,
     AuthModule,
     BankAccountsModule,

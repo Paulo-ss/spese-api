@@ -12,4 +12,5 @@ export interface IConfig {
   redisConfig: IRedisConfig;
   domain: string;
   isProduction: boolean;
+  apiPort: number;
 }

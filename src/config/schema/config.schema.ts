@@ -8,6 +8,7 @@ export const validationSchema = Joi.object({
   JWT_RESET_PASSWORD_TIME: Joi.number().required(),
   JWT_REFRESH_SECRET: Joi.string().required(),
   JWT_REFRESH_TIME: Joi.number().required(),
+  JWT_PRIVATE_KEY: Joi.string().required(),
   POSTGRES_USER: Joi.string().required(),
   POSTGRES_DB: Joi.string().required(),
   POSTGRES_PASSWORD: Joi.string().required(),
@@ -21,8 +22,8 @@ export const validationSchema = Joi.object({
   EMAIL_PASSWORD: Joi.string().required(),
   DOMAIN: Joi.string().required(),
   IS_PRODUCTION: Joi.boolean().required(),
-  JWT_PRIVATE_KEY: Joi.string().required(),
   REDIS_HOST: Joi.string().required(),
   REDIS_PORT: Joi.number().required(),
   REDIS_PASSWORD: Joi.string(),
+  API_PORT: Joi.number().required(),
 });

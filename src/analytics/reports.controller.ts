@@ -21,7 +21,7 @@ import { ReportJobDto } from './dto/report-job.dto';
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
-  @Sse(':id/status')
+  @Sse(':id/exports/status')
   public async streamReportStatus(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() userId: number,

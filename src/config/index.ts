@@ -54,5 +54,6 @@ export function config(): IConfig {
       port: JSON.parse(process.env.REDIS_PORT),
       password: process.env.REDIS_PASSWORD,
     },
+    apiPort: parseInt(process.env.API_PORT, 10),
   };
 }

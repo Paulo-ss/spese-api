@@ -1,16 +1,32 @@
 services:
-  spese-api:
-    build: .
-    command: npm run start:dev
-    restart: always
-    ports:
-      - 8082:8082
-    env_file:
-      - .env
-    volumes:
-      - .:/home/spese-api
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-
   redis:
     image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./docker/redis:/data
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    networks:
+      - spese
+
+  postgres:
+    image: postgres:16.10-alpine3.22
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - ./docker/postgres:/var/lib/postgresql/data
+    networks:
+      - spese
+
+networks:
+  spese:
+    driver: bridge
+
+volumes:
+  postgres:
+  redis:

@@ -9,7 +9,6 @@ import { CommonService } from 'src/common/common.service';
 import { UsersService } from 'src/users/users.service';
 import { Repository } from 'typeorm';
 import { JwtService } from 'src/jwt/jwt.service';
-import { ClientProxy } from '@nestjs/microservices';
 import { SignUpDto } from './dto/sign-up.dto';
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
 import { TokenType } from 'src/jwt/enums/token-type.enum';
