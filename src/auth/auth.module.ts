@@ -5,7 +5,7 @@ import { UsersModule } from 'src/users/users.module';
 import { JwtModule } from 'src/jwt/jwt.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { ExternalOauthModule } from './external-oauth/external-oauth.module';
+import { ExternalOauthModule } from '../external-oauth/external-oauth.module';
 import { BlacklistedTokenEntity } from './entities/blacklisted-token.entity';
 import { MailerModule } from 'src/mailer/mailer.module';
 

@@ -49,7 +49,7 @@ export class ReportsController {
   }
 
   @Get('/user')
-  public async getAllUsersReports(
+  public async getAllReportsForUser(
     @CurrentUser() userId: number,
   ): Promise<ReportEntity[]> {
     return this.reportsService.getUsersReports(userId);

@@ -41,6 +41,7 @@ import { TasksModule } from './tasks/tasks.module';
 import { CashFlowModule } from './cash-flow/cash-flow.module';
 import { CashFlowDailyEntity } from './cash-flow/entities/cash-flow-daily.entity';
 import { CashFlowTransactionEntity } from './cash-flow/entities/cash-flow-transactions.entity';
+import { AsyncWorkerModule } from './async-worker/async-worker.module';
 
 @Module({
   imports: [
@@ -91,6 +92,7 @@ import { CashFlowTransactionEntity } from './cash-flow/entities/cash-flow-transa
     CategoryModule,
     TasksModule,
     CashFlowModule,
+    AsyncWorkerModule,
   ],
   controllers: [
     AppController,

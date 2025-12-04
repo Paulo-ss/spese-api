@@ -10,7 +10,9 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
   app.enableCors({ origin: process.env.DOMAIN });
 
-  await app.listen(process.env.API_PORT);
+  await app.listen(Number(process.env.API_PORT));
 }
 
-bootstrap();
+bootstrap()
+  .then(() => console.log('Spese API is running...'))
+  .catch((error) => console.error('Error on app bootstrap', error));

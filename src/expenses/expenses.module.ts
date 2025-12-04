@@ -6,6 +6,7 @@ import { ExpenseEntity } from './entities/expense.entity';
 import { CreditCardsModule } from 'src/credit-cards/credit-cards.module';
 import { BankAccountsModule } from 'src/bank-accounts/bank-accounts.module';
 import { CategoryModule } from 'src/category/category.module';
+import { AsyncWorkerModule } from 'src/async-worker/async-worker.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { CategoryModule } from 'src/category/category.module';
     forwardRef(() => CreditCardsModule),
     BankAccountsModule,
     CategoryModule,
+    AsyncWorkerModule,
   ],
   controllers: [ExpensesController],
   providers: [ExpensesService],

@@ -1,5 +1,5 @@
 import { OAuth2Client } from 'google-auth-library';
-import { ExternalSignInDto } from '../../../dto/external-sign-in.dto';
+import { ExternalSignInDto } from '../../../auth/dto/external-sign-in.dto';
 import { ExternalOauthService } from '../external-oauth.abstract.service';
 import { Injectable } from '@nestjs/common';
 import { CommonService } from 'src/common/common.service';

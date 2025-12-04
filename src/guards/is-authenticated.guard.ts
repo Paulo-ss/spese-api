@@ -60,7 +60,7 @@ export class IsAuthenticatedGuard implements CanActivate {
       return false;
     }
 
-    const [_, accessToken] = authorizationHeader.split(' ');
+    const accessToken = authorizationHeader.split(' ')[1];
     return await this.validateAccessToken(accessToken, request);
   }
 }

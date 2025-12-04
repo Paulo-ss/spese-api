@@ -1,7 +1,7 @@
 import { Body, Controller, Post } from '@nestjs/common';
-import { AuthService } from '../auth.service';
-import { ExternalSignInDto } from '../dto/external-sign-in.dto';
-import { IAuthResult } from '../interfaces/auth-result.interface';
+import { AuthService } from '../auth/auth.service';
+import { ExternalSignInDto } from '../auth/dto/external-sign-in.dto';
+import { IAuthResult } from '../auth/interfaces/auth-result.interface';
 
 @Controller('external-authorization')
 export class ExternalOauthController {

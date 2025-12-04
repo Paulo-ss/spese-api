@@ -1,1 +1,1 @@
-export type AvailableExternalOauthProviders = 'google' | 'facebook';
+export type AvailableExternalOauthProviders = 'google';

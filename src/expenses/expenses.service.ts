@@ -18,6 +18,8 @@ import { ExpenseCategory } from './enums/expense-category.enum';
 import { getInvoiceMonth } from 'src/credit-cards/utils/get-invoice-month.util';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { CategoryService } from 'src/category/category.service';
+import { RedisPublisher } from 'src/async-worker/publisher/redis.publisher';
+import { ASYNC_WORKER } from 'src/common/constants/constants';
 
 @Injectable()
 export class ExpensesService {
@@ -348,6 +350,19 @@ export class ExpensesService {
     });
 
     await this.commonService.saveEntity(this.expensesRepository, expense);
+
+    // await this.redisPublisher.publishToStream<
+    //   typeof ASYNC_WORKER.REDIS_STREAMS.EXPENSE_CREATED
+    // >({
+    //   streamName: ASYNC_WORKER.REDIS_STREAMS.EXPENSE_CREATED,
+    //   message: {
+    //     expenseId: expense.id.toString(),
+    //     userId: expense.userId.toString(),
+    //     value: expense.price,
+    //     description: expense.name,
+    //     timestamp: new Date(),
+    //   },
+    // });
 
     return expense;
   }

@@ -24,9 +24,10 @@ import { ResetPasswordEmailDto } from './dto/reset-password-email.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { isNull, isUndefined } from 'src/common/utils/validation.utils';
 import { ExternalSignInDto } from './dto/external-sign-in.dto';
-import { ExternalOauthService } from './external-oauth/services/external-oauth.abstract.service';
+import { ExternalOauthService } from '../external-oauth/services/external-oauth.abstract.service';
 import { BlacklistedTokenEntity } from './entities/blacklisted-token.entity';
 import { MailerService } from 'src/mailer/mailer.service';
+import { DEPENDENCY_INJECTION_PROVIDERS } from 'src/common/constants/constants';
 
 @Injectable()
 export class AuthService {
@@ -37,7 +38,7 @@ export class AuthService {
     private readonly commonService: CommonService,
     private readonly jwtService: JwtService,
     private readonly mailerService: MailerService,
-    @Inject('EXTERNAL_OAUTH_PROVIDERS')
+    @Inject(DEPENDENCY_INJECTION_PROVIDERS.EXTERNAL_OAUTH_PROVIDERS)
     private readonly externalOauthServices: ExternalOauthService[],
   ) {}
 

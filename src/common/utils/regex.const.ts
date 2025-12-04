@@ -14,4 +14,3 @@ export const BCRYPT_HASH = /\$2[abxy]?\$\d{1,2}\$[A-Za-z\d\./]{53}/;
 export const DATE_MM_DD_YYYY_REGEX = /\d{2}-\d{2}-\d{4}/;
 
 export const DATE_MM_YYYY_REGEX = /\d{2}-\d{4}/;
-
