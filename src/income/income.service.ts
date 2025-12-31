@@ -10,15 +10,12 @@ import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-r
 import { isEmpty } from 'class-validator';
 import { FilterIncomesDto } from './dto/filter-incomes.dto';
 import { BankAccountsService } from 'src/bank-accounts/bank-accounts.service';
-import { WageService } from './wage.service';
 
 @Injectable()
 export class IncomeService {
   constructor(
     @InjectRepository(IncomeEntity)
     private readonly incomesRepository: Repository<IncomeEntity>,
-    @Inject(forwardRef(() => WageService))
-    private readonly wageService: WageService,
     private readonly commonService: CommonService,
     @Inject(forwardRef(() => BankAccountsService))
     private readonly bankAccountService: BankAccountsService,
@@ -35,7 +32,6 @@ export class IncomeService {
       },
       relations: {
         bankAccount: { expenses: false },
-        wage: { bankAccount: false },
       },
     });
     this.commonService.checkEntityExistence(income, 'Renda');
@@ -58,10 +54,6 @@ export class IncomeService {
 
     if (filters.userId) {
       query.andWhere('in.user_id = :userId', { userId: filters.userId });
-    }
-
-    if (filters.wageId) {
-      query.andWhere('in.wageId = :wageId', { wageId: filters.wageId });
     }
 
     query.orderBy('in.income_month', 'DESC');
@@ -88,7 +80,6 @@ export class IncomeService {
         to: lastDayOfTheMonth,
       })
       .andWhere('in.user_id = :userId', { userId })
-      .andWhere('in.wageId is null')
       .getMany();
 
     if (isNull(incomes) || isUndefined(incomes) || isEmpty(incomes)) {
@@ -118,9 +109,6 @@ export class IncomeService {
           )
         : undefined,
       userId: userId,
-      wage: createIncome.wage
-        ? await this.wageService.findById(createIncome.wage.id, userId, false)
-        : undefined,
     });
 
     await this.commonService.saveEntity(this.incomesRepository, newIncome);
@@ -146,7 +134,6 @@ export class IncomeService {
             )
           : undefined,
         userId: income.userId,
-        wage: income.wage,
       });
 
       await this.commonService.saveEntity(this.incomesRepository, newIncome);

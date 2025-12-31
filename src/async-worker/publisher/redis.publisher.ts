@@ -2,32 +2,54 @@ import { Inject, Injectable } from '@nestjs/common';
 import { IPublisher } from '../interfaces/publisher.interface';
 import { RedisConnection } from '../connection/redis-connection';
 import { Logger } from '@nestjs/common';
-import { RedisMessage, StreamName } from '../types/messages-definition';
+import { StreamName } from '../types/redis';
+import { IBaseMessage } from '../types/messages';
 
 @Injectable()
-export class RedisPublisher implements IPublisher {
+export class RedisPublisher<TMessage extends IBaseMessage>
+  implements IPublisher<TMessage>
+{
   private readonly logger: Logger = new Logger(RedisPublisher.name);
 
   constructor(@Inject() private readonly redisConnection: RedisConnection) {}
 
-  async publishToStream<T extends StreamName>({
+  private async xAddWithTimeout(
+    streamName: StreamName,
+    message: string,
+  ): Promise<string | unknown> {
+    return await Promise.race([
+      this.redisConnection.redis.xAdd(streamName, '*', {
+        data: message,
+      }),
+      new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Redis xAdd command timeout.'));
+        }, 10000);
+      }),
+    ]);
+  }
+
+  async publishToStream({
     streamName,
     message,
   }: {
     streamName: StreamName;
-    message: RedisMessage<T>;
-  }): Promise<string> {
+    message: TMessage;
+  }): Promise<string | unknown> {
     try {
       const serializedMessage = JSON.stringify(message);
 
-      const entryId = await this.redisConnection.redis.xAdd(streamName, '*', {
-        data: serializedMessage,
-      });
+      this.logger.log(
+        `Publishing message to stream ${streamName}: `,
+        serializedMessage,
+      );
+
+      const entryId = await this.xAddWithTimeout(streamName, serializedMessage);
 
       return entryId;
     } catch (error) {
       this.logger.error(
-        `Failed to publish to redis stream ${streamName}:`,
+        `Failed to publish to redis stream ${streamName} and message ${message}: `,
         error,
       );
 

@@ -9,8 +9,9 @@ import { IRedisConnection } from '../interfaces/redis-connection.interface';
 import { createClient, RedisClientType } from '@redis/client';
 import { ConfigService } from '@nestjs/config';
 import { IRedisConfig } from 'src/config/interfaces/redis.interface';
+import { Scope } from '@nestjs/common';
 
-@Injectable()
+@Injectable({ scope: Scope.TRANSIENT })
 export class RedisConnection
   implements IRedisConnection, OnModuleInit, OnModuleDestroy
 {
@@ -50,15 +51,24 @@ export class RedisConnection
   }
 
   get redis(): RedisClientType {
+    if (!this.client.isOpen) {
+      throw new Error('Redis client is not connected');
+    }
+
     return this.client;
   }
 
   async initRedisConnection(): Promise<RedisClientType> {
     try {
       const connection = await this.client.connect();
+
+      this.logger.log('Redis connection initialized successfully.');
+
       return connection;
     } catch (error) {
       this.logger.error('Failed to connect to Redis: ', error);
+
+      throw error;
     }
   }
 

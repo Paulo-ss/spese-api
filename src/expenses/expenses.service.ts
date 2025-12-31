@@ -20,6 +20,8 @@ import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { CategoryService } from 'src/category/category.service';
 import { RedisPublisher } from 'src/async-worker/publisher/redis.publisher';
 import { ASYNC_WORKER } from 'src/common/constants/constants';
+import { TransactionType } from 'src/analytics/enums/transaction-type';
+import { ITransactionCreatedMessage } from 'src/async-worker/types/messages';
 
 @Injectable()
 export class ExpensesService {
@@ -32,6 +34,8 @@ export class ExpensesService {
     private readonly creditCardService: CreditCardsService,
     private readonly commonService: CommonService,
     private readonly categoryService: CategoryService,
+    @Inject()
+    private readonly redisPublisher: RedisPublisher<ITransactionCreatedMessage>,
   ) {}
 
   public async findById(
@@ -304,7 +308,7 @@ export class ExpensesService {
             nextMonthExpenseDate.getMonth() + i - 1,
           );
 
-          const newExpense = this.expensesRepository.create({
+          const installmentExpense = this.expensesRepository.create({
             expenseType,
             status:
               invoices[i - 1].status === InvoiceStatus.PAID
@@ -325,7 +329,7 @@ export class ExpensesService {
 
           await this.commonService.saveEntity(
             this.expensesRepository,
-            newExpense,
+            installmentExpense,
           );
         }
 
@@ -351,18 +355,23 @@ export class ExpensesService {
 
     await this.commonService.saveEntity(this.expensesRepository, expense);
 
-    // await this.redisPublisher.publishToStream<
-    //   typeof ASYNC_WORKER.REDIS_STREAMS.EXPENSE_CREATED
-    // >({
-    //   streamName: ASYNC_WORKER.REDIS_STREAMS.EXPENSE_CREATED,
-    //   message: {
-    //     expenseId: expense.id.toString(),
-    //     userId: expense.userId.toString(),
-    //     value: expense.price,
-    //     description: expense.name,
-    //     timestamp: new Date(),
-    //   },
-    // });
+    /**
+     * Only publish to the stream if the expense is not a credit card expense,
+     * because if it is, we'll handle it on the invoice subscriber.
+     */
+    if (!creditCard) {
+      this.redisPublisher.publishToStream({
+        streamName: ASYNC_WORKER.REDIS_STREAMS.EXPENSE_CREATED,
+        message: {
+          userId: expense.userId,
+          timestamp: expense.expenseDate.toISOString(),
+          entityId: expense.id.toString(),
+          value: expense.price,
+          description: expense.name,
+          transactionType: TransactionType.EXPENSE,
+        },
+      });
+    }
 
     return expense;
   }

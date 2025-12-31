@@ -3,7 +3,6 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { ReportsService } from 'src/analytics/reports.service';
 import { BankAccountsService } from 'src/bank-accounts/bank-accounts.service';
 import { InvoiceService } from 'src/credit-cards/invoice.service';
-import { WageService } from 'src/income/wage.service';
 import { NotificationsDBService } from 'src/notifications/notifications-db.service';
 
 @Injectable()
@@ -12,7 +11,6 @@ export class TasksService {
     private readonly notificationsDBService: NotificationsDBService,
     private readonly invoiceService: InvoiceService,
     private readonly reportsService: ReportsService,
-    private readonly wageService: WageService,
     private readonly bankAccountService: BankAccountsService,
   ) {}
 
@@ -45,10 +43,5 @@ export class TasksService {
   @Cron(CronExpression.EVERY_DAY_AT_2AM, { timeZone: 'America/Sao_Paulo' })
   public async deleteReportsOlderThanOneDay() {
     await this.reportsService.deleteReportsOlderThanOneDay();
-  }
-
-  @Cron(CronExpression.EVERY_DAY_AT_3AM, { timeZone: 'America/Sao_Paulo' })
-  public async generateWagesIncomes() {
-    await this.wageService.generateWagesIncomes();
   }
 }

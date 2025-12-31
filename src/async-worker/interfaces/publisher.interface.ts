@@ -1,10 +1,13 @@
-import { RedisMessage, StreamName } from '../types/messages-definition';
+import { IBaseMessage } from '../types/messages';
+import { StreamName } from '../types/redis';
 
-interface IPublishToStream {
+interface IPublishToStream<TMessage extends IBaseMessage> {
   streamName: StreamName;
-  message: RedisMessage<StreamName>;
+  message: TMessage;
 }
 
-export interface IPublisher {
-  publishToStream: (publishToStream: IPublishToStream) => Promise<string>;
+export interface IPublisher<TMessage extends IBaseMessage> {
+  publishToStream: (
+    publishToStream: IPublishToStream<TMessage>,
+  ) => Promise<string | unknown>;
 }

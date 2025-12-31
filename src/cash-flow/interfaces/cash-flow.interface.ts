@@ -1,4 +1,4 @@
-import { CalendarEventType } from 'src/analytics/enums/calendar-event-type.enum';
+import { TransactionType } from 'src/analytics/enums/transaction-type';
 
 export interface ICashFlowDaily {
   id: number;
@@ -10,18 +10,17 @@ export interface ICashFlowDaily {
   updatedAt: Date;
 }
 
-export interface ICashFlowTransaction {
+export interface ITransaction {
   id: number;
-  type: CalendarEventType;
+  type: TransactionType;
   value: number;
   title: string;
-  start: Date;
-  end: Date;
+  date: Date;
 }
 
 export type TDailyCashFlow = {
   [key: string]: {
-    transactions: ICashFlowTransaction[];
+    transactions: ITransaction[];
     openingBalance?: number;
     closingBalance?: number;
   };

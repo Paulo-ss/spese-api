@@ -5,7 +5,6 @@ import { CreditCardsService } from 'src/credit-cards/credit-cards.service';
 import { ExpenseStatus } from 'src/expenses/enums/expense-status.enum';
 import { ExpensesService } from 'src/expenses/expenses.service';
 import { IncomeService } from 'src/income/income.service';
-import { WageService } from 'src/income/wage.service';
 import { IMonthSummary } from './interfaces/month-summary.interface';
 import { ReportFiltersDto } from './dto/report-filters.dto';
 import {
@@ -18,7 +17,6 @@ import { ExpenseCategory } from 'src/expenses/enums/expense-category.enum';
 export class AnalyticsService {
   constructor(
     private readonly incomeService: IncomeService,
-    private readonly wageService: WageService,
     private readonly expensesService: ExpensesService,
     private readonly creditCardService: CreditCardsService,
   ) {}
@@ -80,18 +78,12 @@ export class AnalyticsService {
 
     const usersMonthTotalIncome =
       await this.incomeService.getUsersMonthTotalIncome(userId, month);
-    const allUserWages = await this.wageService.findByUserId(userId);
-    const totalUserWage = allUserWages.reduce(
-      (total, { wage }) => total + Number(wage),
-      0,
-    );
-    const budget = usersMonthTotalIncome + totalUserWage;
 
     return {
-      budget,
+      budget: usersMonthTotalIncome,
       expensesTotal: monthExpensesTotal,
       paidTotal: monthPaidExpensesTotal,
-      monthBalance: budget - monthExpensesTotal,
+      monthBalance: usersMonthTotalIncome - monthExpensesTotal,
     };
   }
 

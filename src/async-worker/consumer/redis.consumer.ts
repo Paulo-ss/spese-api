@@ -1,30 +1,26 @@
 import { Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { IConsumer } from '../interfaces/consumer.interface';
 import { RedisConnection } from '../connection/redis-connection';
-import {
-  GroupName,
-  RedisMessage,
-  StreamEntryId,
-  StreamMessages,
-  StreamName,
-} from '../types/messages-definition';
+import { GroupName, StreamMessages, StreamName } from '../types/redis';
 import { ASYNC_WORKER } from 'src/common/constants/constants';
 import { IGroupConfig } from '../interfaces/group-config.interface';
 
-export class RedisConsumer implements IConsumer, OnModuleInit, OnModuleDestroy {
+export class RedisConsumer<T>
+  implements IConsumer, OnModuleInit, OnModuleDestroy
+{
   private readonly logger: Logger = new Logger(RedisConsumer.name);
   private readonly existingGroups: Set<GroupName> = new Set();
   private isRunning: boolean = true;
   private lastSuccessfullMessageId: string | null = null;
+  private nextEntryId: string | null = null;
+  private checkBacklog: boolean = true;
 
   constructor(
     private readonly redisConnection: RedisConnection,
     private readonly streamName: StreamName,
     private readonly groupName: GroupName,
     private readonly consumerName: string,
-    private readonly onMessage: (
-      message: RedisMessage<StreamName>,
-    ) => Promise<void>,
+    private readonly onMessage: (message: T) => Promise<void>,
     private readonly groupConfig: IGroupConfig,
   ) {}
 
@@ -55,15 +51,23 @@ export class RedisConsumer implements IConsumer, OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async ackMessages(lastProcessedMessageId: string) {
-    const ackResponse = await this.redisConnection.redis.xAck(
-      this.streamName,
-      this.groupName,
-      lastProcessedMessageId,
-    );
+  private async ackMessage(lastProcessedMessageId: string) {
+    try {
+      console.log('HERE');
+      const ackResponse = await this.redisConnection.redis.xAck(
+        this.streamName,
+        this.groupName,
+        lastProcessedMessageId,
+      );
 
-    if (ackResponse === ASYNC_WORKER.ACK_SUCCESS) {
-      this.lastSuccessfullMessageId = lastProcessedMessageId;
+      if (ackResponse === ASYNC_WORKER.ACK_SUCCESS) {
+        this.lastSuccessfullMessageId = lastProcessedMessageId;
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to ack message ${lastProcessedMessageId} from stream ${this.streamName}, skipping. The error is: `,
+        error,
+      );
     }
   }
 
@@ -86,9 +90,9 @@ export class RedisConsumer implements IConsumer, OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async processMessages(startingEntryId: StreamEntryId) {
+  private async processMessages(startingEntryId: string) {
     const messages = await this.getNextMessageListBlocking(startingEntryId);
-    if (messages.length === 0) {
+    if (!messages || messages.length === 0) {
       return;
     }
 
@@ -99,16 +103,19 @@ export class RedisConsumer implements IConsumer, OnModuleInit, OnModuleDestroy {
       return;
     }
 
+    if (streamMessages.messages.length === 0) {
+      this.checkBacklog = false;
+      return;
+    }
+
     for (const { id, message } of streamMessages.messages) {
       try {
-        const parsedMessage = JSON.parse(
-          message['data'],
-        ) as RedisMessage<StreamName>;
+        const parsedMessage = JSON.parse(message['data']) as T;
         await this.onMessage(parsedMessage);
-        await this.ackMessages(id);
+        await this.ackMessage(id);
       } catch (error) {
         this.logger.error(
-          `Error processing message ${id} from stream ${this.streamName}, skipping. The error is:`,
+          `Error processing message ${id} with content ${message} from stream ${this.streamName}, skipping. The error is:`,
           error,
         );
       }
@@ -116,19 +123,38 @@ export class RedisConsumer implements IConsumer, OnModuleInit, OnModuleDestroy {
   }
 
   async start() {
+    this.logger.log(
+      `Consumer for stream ${this.streamName} started. Group: ${this.groupName}. Consumer: ${this.consumerName}`,
+    );
+
     while (this.isRunning) {
       try {
         await this.ensureGroupExists();
-        await this.processMessages(ASYNC_WORKER.REDIS_ENTRY_IDS.PENDING_ENTRY);
-        await this.processMessages(
-          ASYNC_WORKER.REDIS_ENTRY_IDS.UNRECEIVED_ENTRY,
+
+        if (this.checkBacklog) {
+          this.nextEntryId =
+            this.lastSuccessfullMessageId ??
+            ASYNC_WORKER.REDIS_ENTRY_IDS.PENDING_ENTRY;
+        } else {
+          this.nextEntryId = ASYNC_WORKER.REDIS_ENTRY_IDS.UNRECEIVED_ENTRY;
+        }
+
+        await this.processMessages(this.nextEntryId);
+      } catch (error) {
+        this.logger.error(
+          `Error processing messages from stream ${this.streamName}, skipping. The error is:`,
+          error,
         );
-      } catch (error) {}
+      }
     }
   }
 
   async stop() {
     this.isRunning = false;
+    this.lastSuccessfullMessageId = null;
+    this.nextEntryId = null;
+    this.checkBacklog = true;
+
     this.existingGroups.clear();
     this.logger.log(
       `Consumer for stream ${this.streamName} stopped. Group: ${this.groupName}. Consumer: ${this.consumerName}`,

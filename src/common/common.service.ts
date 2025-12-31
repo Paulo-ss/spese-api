@@ -8,7 +8,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { isNull, isUndefined } from './utils/validation.utils';
-import { Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import slugify from 'slugify';
 import { IGenericMessageResponse } from './interfaces/generic-message-response.interface';
 import { v4 } from 'uuid';
@@ -17,7 +17,7 @@ import { v4 } from 'uuid';
 export class CommonService {
   private readonly loggerService: LoggerService;
 
-  constructor() {
+  constructor(private dataSource: DataSource) {
     this.loggerService = new Logger(CommonService.name);
   }
 
@@ -37,6 +37,10 @@ export class CommonService {
     message: string,
   ): IGenericMessageResponse {
     return { id: v4(), message };
+  }
+
+  public getNegativeNumber(number: number): number {
+    return -Math.abs(number);
   }
 
   public async throwDuplicateError<T>(promise: Promise<T>, message?: string) {
@@ -85,5 +89,13 @@ export class CommonService {
 
   public async removeMultipleEntities<T>(repo: Repository<T>, entity: T[]) {
     await this.throwInternalError(repo.remove(entity));
+  }
+
+  public async startTransaction(
+    callback: (entityManager: EntityManager) => Promise<void>,
+  ) {
+    return this.dataSource.transaction(async (entityManager) => {
+      await callback(entityManager);
+    });
   }
 }

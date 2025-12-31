@@ -8,8 +8,6 @@ import {
 import { IIncome } from '../interfaces/income.interface';
 import { BankAccountEntity } from 'src/bank-accounts/entities/bank.entity';
 import { IBankAccount } from 'src/bank-accounts/interfaces/bank-account.interface';
-import { WageEntity } from './wage.entity';
-import { IWage } from '../interfaces/wage.interface';
 
 @Entity({ name: 'incomes' })
 export class IncomeEntity implements IIncome {
@@ -24,9 +22,6 @@ export class IncomeEntity implements IIncome {
 
   @ManyToOne(() => BankAccountEntity, { nullable: true })
   public bankAccount?: IBankAccount;
-
-  @ManyToOne(() => WageEntity, { nullable: true })
-  public wage?: IWage;
 
   @Column({ name: 'user_id' })
   public userId: number;

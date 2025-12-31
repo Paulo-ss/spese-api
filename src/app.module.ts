@@ -11,7 +11,6 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { BullModule } from '@nestjs/bull';
 import { ExpenseEntity } from './expenses/entities/expense.entity';
 import { IncomeEntity } from './income/entities/income.entity';
-import { WageEntity } from './income/entities/wage.entity';
 import { BankAccountEntity } from './bank-accounts/entities/bank.entity';
 import { CreditCardEntity } from './credit-cards/entities/credit-card.entity';
 import { InvoiceEntity } from './credit-cards/entities/invoice.entity';
@@ -39,8 +38,7 @@ import { CategoryModule } from './category/category.module';
 import { CategoryEntity } from './category/entities/category.entity';
 import { TasksModule } from './tasks/tasks.module';
 import { CashFlowModule } from './cash-flow/cash-flow.module';
-import { CashFlowDailyEntity } from './cash-flow/entities/cash-flow-daily.entity';
-import { CashFlowTransactionEntity } from './cash-flow/entities/cash-flow-transactions.entity';
+import { CashFlowDayEntity } from './cash-flow/entities/cash-flow-daily.entity';
 import { AsyncWorkerModule } from './async-worker/async-worker.module';
 
 @Module({
@@ -56,7 +54,6 @@ import { AsyncWorkerModule } from './async-worker/async-worker.module';
       entities: [
         ExpenseEntity,
         IncomeEntity,
-        WageEntity,
         BankAccountEntity,
         CreditCardEntity,
         InvoiceEntity,
@@ -67,8 +64,7 @@ import { AsyncWorkerModule } from './async-worker/async-worker.module';
         ReportEntity,
         NotificationEntity,
         CategoryEntity,
-        CashFlowDailyEntity,
-        CashFlowTransactionEntity,
+        CashFlowDayEntity,
       ],
       synchronize: !JSON.parse(process.env.IS_PRODUCTION),
     }),

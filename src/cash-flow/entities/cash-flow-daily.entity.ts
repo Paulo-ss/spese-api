@@ -2,18 +2,13 @@ import {
   Column,
   CreateDateColumn,
   Entity,
-  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import {
-  ICashFlowDaily,
-  ICashFlowTransaction,
-} from '../interfaces/cash-flow.interface';
-import { CashFlowTransactionEntity } from './cash-flow-transactions.entity';
+import { ICashFlowDaily } from '../interfaces/cash-flow.interface';
 
-@Entity('daily_cash_flow')
-export class CashFlowDailyEntity implements ICashFlowDaily {
+@Entity('cash_flow_days')
+export class CashFlowDayEntity implements ICashFlowDaily {
   @PrimaryGeneratedColumn()
   public id: number;
 
@@ -38,9 +33,6 @@ export class CashFlowDailyEntity implements ICashFlowDaily {
 
   @Column({ name: 'user_id' })
   public userId: number;
-
-  @OneToMany(() => CashFlowTransactionEntity, (event) => event.cashFlow)
-  public events: ICashFlowTransaction[];
 
   @CreateDateColumn({ name: 'created_at' })
   public createdAt: Date;

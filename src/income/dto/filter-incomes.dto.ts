@@ -15,8 +15,4 @@ export class FilterIncomesDto {
   @IsOptional()
   @IsNumber()
   public userId?: number;
-
-  @IsOptional()
-  @IsNumber()
-  public wageId?: number;
 }
