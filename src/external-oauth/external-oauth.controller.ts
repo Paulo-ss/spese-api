@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post, Headers } from '@nestjs/common';
 import { AuthService } from '../auth/auth.service';
 import { ExternalSignInDto } from '../auth/dto/external-sign-in.dto';
 import { IAuthResult } from '../auth/interfaces/auth-result.interface';
@@ -10,7 +10,8 @@ export class ExternalOauthController {
   @Post('oauth2/sign-in')
   public async externalOauthSignIn(
     @Body() externalSignInDto: ExternalSignInDto,
+    @Headers('x-timezone') timezone: string,
   ): Promise<IAuthResult> {
-    return this.authService.externalOauthSignIn(externalSignInDto);
+    return this.authService.externalOauthSignIn(externalSignInDto, timezone);
   }
 }

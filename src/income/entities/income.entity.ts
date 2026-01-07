@@ -26,9 +26,11 @@ export class IncomeEntity implements IIncome {
   @Column({ name: 'user_id' })
   public userId: number;
 
-  @Column('date', { name: 'income_month' })
+  @Column('timestamp', {
+    name: 'income_month',
+  })
   public incomeMonth: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ type: 'timestamp', name: 'updated_at' })
   public updatedAt: Date;
 }

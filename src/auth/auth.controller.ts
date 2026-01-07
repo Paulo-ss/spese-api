@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Headers,
   HttpCode,
   HttpStatus,
   Post,
@@ -20,8 +21,11 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('sign-up')
-  public async signUp(@Body() signUpDto: SignUpDto) {
-    return this.authService.signUp(signUpDto);
+  public async signUp(
+    @Body() signUpDto: SignUpDto,
+    @Headers('x-timezone') timezone: string,
+  ) {
+    return this.authService.signUp(signUpDto, timezone);
   }
 
   @Post('sign-in')

@@ -1,4 +1,4 @@
-import { TransactionType } from 'src/analytics/enums/transaction-type';
+import { TransactionType } from 'src/cash-flow/interfaces/transaction-type';
 
 export interface ICashFlowDaily {
   id: number;
@@ -11,11 +11,12 @@ export interface ICashFlowDaily {
 }
 
 export interface ITransaction {
-  id: number;
+  entityId: number;
   type: TransactionType;
-  value: number;
+  price: number;
   title: string;
-  date: Date;
+  start: Date | string;
+  end: Date | string;
 }
 
 export type TDailyCashFlow = {

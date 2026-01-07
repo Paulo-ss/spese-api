@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { ICashFlowDaily } from '../interfaces/cash-flow.interface';
+import { ColumnNumericTransformer } from 'src/common/transformers/column-numeric-transformer.transformer';
 
 @Entity('cash_flow_days')
 export class CashFlowDayEntity implements ICashFlowDaily {
@@ -17,6 +18,7 @@ export class CashFlowDayEntity implements ICashFlowDaily {
     precision: 10,
     scale: 2,
     nullable: true,
+    transformer: new ColumnNumericTransformer(),
   })
   public openingBalance: number;
 
@@ -25,18 +27,19 @@ export class CashFlowDayEntity implements ICashFlowDaily {
     precision: 10,
     scale: 2,
     nullable: true,
+    transformer: new ColumnNumericTransformer(),
   })
   public closingBalance: number;
 
-  @Column('date', { name: 'date' })
+  @Column('timestamp', { name: 'date' })
   public date: Date;
 
-  @Column({ name: 'user_id' })
+  @Column({ name: 'user_id', transformer: new ColumnNumericTransformer() })
   public userId: number;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
   public createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ type: 'timestamp', name: 'updated_at' })
   public updatedAt: Date;
 }

@@ -100,6 +100,7 @@ export class JwtService {
               username: user.username,
               name: user.name,
               email: user.email,
+              timezone: user.timezone,
             },
             privateKey,
             {

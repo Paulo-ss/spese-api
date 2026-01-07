@@ -79,12 +79,20 @@ export class AuthService {
     }
   }
 
-  public async signUp(signUpDto: SignUpDto): Promise<IGenericMessageResponse> {
+  public async signUp(
+    signUpDto: SignUpDto,
+    timezone: string,
+  ): Promise<IGenericMessageResponse> {
     const { name, email, password, passwordConfirmation } = signUpDto;
 
     this.comparePasswords(password, passwordConfirmation);
 
-    const user = await this.usersService.create(name, password, email);
+    const user = await this.usersService.create(
+      name,
+      password,
+      email,
+      timezone,
+    );
 
     const confirmationToken = await this.jwtService.generateToken(
       user,
@@ -147,6 +155,7 @@ export class AuthService {
 
   public async externalOauthSignIn(
     externalOauthSignIn: ExternalSignInDto,
+    timezone: string,
   ): Promise<IAuthResult> {
     const { provider } = externalOauthSignIn;
 
@@ -160,7 +169,7 @@ export class AuthService {
     let user = await this.usersService.findOneByEmail(email, false);
 
     if (isUndefined(user) || isNull(user)) {
-      user = await this.usersService.externalOauthCreate(name, email);
+      user = await this.usersService.externalOauthCreate(name, email, timezone);
     }
 
     const accessToken = await this.jwtService.generateToken(

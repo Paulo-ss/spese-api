@@ -10,9 +10,9 @@ export class CashFlowController {
 
   @Get('month/:month')
   public async getMonthCashFlow(
-    @Param('month') month: string,
+    @Param('month') monthYear: string,
     @CurrentUser() userId: number,
   ) {
-    return this.cashFlowService.getMonthCashFlow(month, userId);
+    return this.cashFlowService.getMonthCashFlow({ monthYear, userId });
   }
 }

@@ -3,9 +3,12 @@ import { readFileSync } from 'fs';
 import * as jwt from 'jsonwebtoken';
 import { join } from 'path';
 import { Request } from 'express-serve-static-core';
+import { ClsService } from 'nestjs-cls';
 
 @Injectable()
 export class IsAuthenticatedGuard implements CanActivate {
+  constructor(private readonly cls: ClsService) {}
+
   private async verifyTokenAsync<T>(
     token: string,
     secret: string,
@@ -35,15 +38,17 @@ export class IsAuthenticatedGuard implements CanActivate {
     );
 
     try {
-      const { userId } = await this.verifyTokenAsync<{ userId: number }>(
-        accessToken,
-        publicKey,
-        {
-          algorithms: ['RS256'],
-        },
-      );
+      const { userId, timezone } = await this.verifyTokenAsync<{
+        userId: number;
+        timezone: string;
+      }>(accessToken, publicKey, {
+        algorithms: ['RS256'],
+      });
 
       request.user = userId;
+
+      this.cls.set('timezone', timezone);
+
       isAuthenticated = true;
     } catch (error) {
       isAuthenticated = false;

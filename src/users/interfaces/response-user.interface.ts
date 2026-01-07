@@ -5,6 +5,7 @@ export interface IResponseUser {
   email: string;
   confirmed: boolean;
   accountSetup: boolean;
+  timezone: string;
   createdAt: string;
   updatedAt: string;
 }

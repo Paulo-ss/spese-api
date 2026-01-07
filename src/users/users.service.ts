@@ -80,6 +80,7 @@ export class UsersService {
     name: string,
     password: string,
     email: string,
+    timezone: string,
   ): Promise<UserEntity> {
     await this.checkIfEmailAlreadyExists(email);
 
@@ -89,6 +90,7 @@ export class UsersService {
       name: formattedName,
       username: await this.generateUsername(formattedName),
       password: await hash(password, 10),
+      timezone,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
@@ -100,6 +102,7 @@ export class UsersService {
   public async externalOauthCreate(
     name: string,
     email: string,
+    timezone: string,
   ): Promise<UserEntity> {
     await this.checkIfEmailAlreadyExists(email);
 
@@ -111,6 +114,7 @@ export class UsersService {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       confirmed: true,
+      timezone,
     });
 
     await this.commonService.saveEntity<UserEntity>(this.usersRepository, user);

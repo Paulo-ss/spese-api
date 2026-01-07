@@ -2,8 +2,8 @@ import { Banks } from 'src/bank-accounts/enums/banks.enum';
 import { SimplifiedCreditCardInterface } from '../interfaces/simplified-credit-card.interface';
 import { CreditCardEntity } from '../entities/credit-card.entity';
 import { InvoiceStatus } from '../enums/invoice-status.enum';
-import { getNextBusinessDay } from '../utils/get-next-business-day.util';
 import { getInvoiceMonth } from '../utils/get-invoice-month.util';
+import { getNextBusinessDay } from 'src/common/utils/dates.utils';
 
 export class SimplifiedCreditCardDto implements SimplifiedCreditCardInterface {
   public id: number;

@@ -40,6 +40,7 @@ import { TasksModule } from './tasks/tasks.module';
 import { CashFlowModule } from './cash-flow/cash-flow.module';
 import { CashFlowDayEntity } from './cash-flow/entities/cash-flow-daily.entity';
 import { AsyncWorkerModule } from './async-worker/async-worker.module';
+import { ClsModule } from 'nestjs-cls';
 
 @Module({
   imports: [
@@ -74,6 +75,12 @@ import { AsyncWorkerModule } from './async-worker/async-worker.module';
         host: process.env.REDIS_HOST,
         port: JSON.parse(process.env.REDIS_PORT),
         password: process.env.REDIS_PASSWORD,
+      },
+    }),
+    ClsModule.forRoot({
+      global: true,
+      middleware: {
+        mount: true,
       },
     }),
     UsersModule,

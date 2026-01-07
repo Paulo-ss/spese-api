@@ -6,10 +6,10 @@ import { CommonService } from 'src/common/common.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
 import { InvoiceStatus } from './enums/invoice-status.enum';
-import { getNextBusinessDay } from './utils/get-next-business-day.util';
 import { getInvoiceMonth } from './utils/get-invoice-month.util';
 import { ExpensesService } from 'src/expenses/expenses.service';
 import { ClosedInvoicesDto } from './dto/closed-invoices.dto';
+import { getNextBusinessDay } from 'src/common/utils/dates.utils';
 
 @Injectable()
 export class InvoiceService {

@@ -31,10 +31,10 @@ export class BankAccountEntity implements IBankAccount {
   @Column({ name: 'user_id' })
   public userId: number;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
   public createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ type: 'timestamp', name: 'updated_at' })
   public updatedAt: Date;
 
   @OneToMany(() => ExpenseEntity, (expense) => expense.bankAccount)

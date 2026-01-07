@@ -74,9 +74,14 @@ export class ExpenseEntity implements IExpense {
   @Column({ name: 'user_id' })
   public userId: number;
 
-  @Column('date', { name: 'expense_date' })
+  @Column('timestamp', {
+    name: 'expense_date',
+  })
   public expenseDate: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({
+    type: 'timestamp',
+    name: 'updated_at',
+  })
   public updatedAt: Date;
 }

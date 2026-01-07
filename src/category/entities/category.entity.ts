@@ -26,9 +26,9 @@ export class CategoryEntity implements ICategory {
   @OneToMany(() => ExpenseEntity, (expense) => expense.customCategory)
   public expenses?: ExpenseEntity[];
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
   public createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ type: 'timestamp', name: 'updated_at' })
   public updatedAt: Date;
 }

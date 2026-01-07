@@ -11,6 +11,7 @@ export interface IAccessTokenPayload {
   email: string;
   username: string;
   name: string;
+  timezone: string;
 }
 
 export interface IRefreshTokenPayload {

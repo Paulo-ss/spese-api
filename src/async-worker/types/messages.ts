@@ -1,4 +1,4 @@
-import { TransactionType } from 'src/analytics/enums/transaction-type';
+import { TransactionType } from 'src/cash-flow/interfaces/transaction-type';
 
 export interface IBaseMessage {
   timestamp: string;
@@ -7,7 +7,8 @@ export interface IBaseMessage {
 
 export interface ITransactionCreatedMessage extends IBaseMessage {
   entityId: string;
-  value: number;
   description: string;
   transactionType: TransactionType;
+  price: number;
+  originalPrice?: number;
 }

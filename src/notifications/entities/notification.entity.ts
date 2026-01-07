@@ -31,9 +31,9 @@ export class NotificationEntity implements INotification {
   @Column({ name: 'user_id' })
   public userId: number;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
   public createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ type: 'timestamp', name: 'updated_at' })
   public updatedAt: Date;
 }

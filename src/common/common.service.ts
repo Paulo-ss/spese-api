@@ -12,6 +12,7 @@ import { DataSource, EntityManager, Repository } from 'typeorm';
 import slugify from 'slugify';
 import { IGenericMessageResponse } from './interfaces/generic-message-response.interface';
 import { v4 } from 'uuid';
+import { CurrentUser } from 'src/decorators/current-user.decorator';
 
 @Injectable()
 export class CommonService {
@@ -37,10 +38,6 @@ export class CommonService {
     message: string,
   ): IGenericMessageResponse {
     return { id: v4(), message };
-  }
-
-  public getNegativeNumber(number: number): number {
-    return -Math.abs(number);
   }
 
   public async throwDuplicateError<T>(promise: Promise<T>, message?: string) {
@@ -91,11 +88,15 @@ export class CommonService {
     await this.throwInternalError(repo.remove(entity));
   }
 
-  public async startTransaction(
-    callback: (entityManager: EntityManager) => Promise<void>,
+  public async confirmTransaction<T>(
+    callback: (entityManager: EntityManager) => Promise<T>,
   ) {
     return this.dataSource.transaction(async (entityManager) => {
-      await callback(entityManager);
+      return await callback(entityManager);
     });
+  }
+
+  public async getCurrentUserId(@CurrentUser() userId: number) {
+    return userId;
   }
 }

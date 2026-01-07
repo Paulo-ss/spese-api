@@ -34,7 +34,9 @@ export class InvoiceEntity implements IInvoice {
   })
   public totalPrice: number;
 
-  @Column('date', { name: 'closing_date' })
+  @Column('date', {
+    name: 'closing_date',
+  })
   public closingDate: Date;
 
   @Column('date', { name: 'due_date' })
@@ -49,10 +51,10 @@ export class InvoiceEntity implements IInvoice {
   @Column('enum', { name: 'status', enum: InvoiceStatus })
   public status: InvoiceStatus;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
   public createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ type: 'timestamp', name: 'updated_at' })
   public updatedAt: Date;
 
   @Column({ name: 'user_id' })

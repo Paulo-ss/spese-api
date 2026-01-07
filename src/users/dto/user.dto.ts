@@ -8,6 +8,7 @@ export class UserDto implements IResponseUser {
   public email: string;
   public confirmed: boolean;
   public accountSetup: boolean;
+  public timezone: string;
   public createdAt: string;
   public updatedAt: string;
 
@@ -23,6 +24,7 @@ export class UserDto implements IResponseUser {
       email: user.email,
       confirmed: user.confirmed,
       accountSetup: user.accountSetup,
+      timezone: user.timezone,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     });

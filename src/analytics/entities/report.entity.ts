@@ -25,9 +25,9 @@ export class ReportEntity implements IReport {
   @Column('enum', { name: 'status', enum: ReportStatus })
   public status: ReportStatus;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
   public createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ type: 'timestamp', name: 'updated_at' })
   public updatedAt: Date;
 }

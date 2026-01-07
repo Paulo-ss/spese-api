@@ -45,6 +45,8 @@ export class IncomeService {
     const [month, day, year] = filters.fromDate.split('-').map(Number);
     const [toMonth, toDay, toYear] = filters.toDate.split('-').map(Number);
 
+    console.log({ fromDate: new Date(year, month - 1, day) });
+
     const query = this.incomesRepository
       .createQueryBuilder('in')
       .where('in.income_month between :from and :to', {

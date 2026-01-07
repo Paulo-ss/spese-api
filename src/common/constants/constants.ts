@@ -1,9 +1,11 @@
 export const ASYNC_WORKER = {
   REDIS_STREAMS: {
     EXPENSE_CREATED: 'expense:created',
+    EXPENSE_UPDATED: 'expense:updated',
   },
   REDIS_GROUPS: {
     EXPENSE_CREATED: 'expense_created',
+    EXPENSE_UPDATED: 'expense_updated',
   },
   REDIS_ENTRY_IDS: {
     NEW_ENTRY: '*',

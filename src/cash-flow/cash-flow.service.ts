@@ -1,93 +1,247 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CashFlowDayEntity } from './entities/cash-flow-daily.entity';
 import { FindOperator, LessThan, MoreThan, Repository } from 'typeorm';
-import getMonthCalendarDates from './utils/get-month-calendar-dates.utils';
 import {
   ICashFlowResponse,
+  ITransaction,
   TDailyCashFlow,
 } from './interfaces/cash-flow.interface';
 import { BankAccountsService } from 'src/bank-accounts/bank-accounts.service';
 import { ITransactionCreatedMessage } from 'src/async-worker/types/messages';
 import { CommonService } from 'src/common/common.service';
-import { TransactionType } from 'src/analytics/enums/transaction-type';
+import { TransactionType } from 'src/cash-flow/interfaces/transaction-type';
+import { getNegativeNumber } from 'src/common/utils/numbers.utils';
+import { OperationType } from './interfaces/operation-type';
+import { ExpensesService } from 'src/expenses/expenses.service';
+import {
+  formatInTimezone,
+  getFirstDayOfMonth,
+  getLastDayOfMonth,
+  getMonthCalendarDates,
+} from 'src/common/utils/dates.utils';
+import { IncomeService } from 'src/income/income.service';
+import { InvoiceService } from 'src/credit-cards/invoice.service';
+import { ExpenseEntity } from 'src/expenses/entities/expense.entity';
+import { InvoiceEntity } from 'src/credit-cards/entities/invoice.entity';
+import { IncomeEntity } from 'src/income/entities/income.entity';
+import { RequestContextService } from 'src/common/request-context.service';
 
 @Injectable()
 export class CashFlowService {
+  private readonly logger: Logger = new Logger(CashFlowService.name);
+
   constructor(
     @InjectRepository(CashFlowDayEntity)
     private readonly cashFlowDayRepository: Repository<CashFlowDayEntity>,
     private readonly bankAccountService: BankAccountsService,
     private readonly commonService: CommonService,
+    private readonly expensesService: ExpensesService,
+    private readonly incomeService: IncomeService,
+    private readonly invoiceService: InvoiceService,
+    private readonly requestContext: RequestContextService,
   ) {}
+
+  private mapIncomesToTransaction({
+    incomes,
+  }: {
+    incomes: IncomeEntity[];
+  }): ITransaction[] {
+    const userTimezone = this.requestContext.getTimezone();
+
+    return incomes.map((income) => ({
+      entityId: income.id,
+      type: TransactionType.INCOME,
+      price: income.value,
+      title: income.name,
+      start: formatInTimezone(income.incomeMonth, userTimezone),
+      end: formatInTimezone(income.incomeMonth, userTimezone),
+    }));
+  }
+
+  private mapExpensesToTransaction({
+    expenses,
+  }: {
+    expenses: ExpenseEntity[];
+  }): ITransaction[] {
+    const userTimezone = this.requestContext.getTimezone();
+
+    return expenses.map((expense) => ({
+      entityId: expense.id,
+      type: TransactionType.EXPENSE,
+      price: expense.price,
+      title: expense.name,
+      start: formatInTimezone(expense.expenseDate, userTimezone),
+      end: formatInTimezone(expense.expenseDate, userTimezone),
+    }));
+  }
+
+  private mapInvoicesToTransaction({
+    invoices,
+  }: {
+    invoices: InvoiceEntity[];
+  }): ITransaction[] {
+    const userTimezone = this.requestContext.getTimezone();
+
+    return invoices.map((invoice) => ({
+      entityId: invoice.id,
+      type: TransactionType.INVOICE,
+      price: invoice.currentPrice,
+      title: `Fatura ${invoice.dueDate} ${invoice.creditCard.lastFourDigits}`,
+      start: formatInTimezone(invoice.dueDate, userTimezone),
+      end: formatInTimezone(invoice.dueDate, userTimezone),
+    }));
+  }
+
+  private transformPriceByTransactionAndOperationType({
+    transactionType,
+    operation,
+    price,
+    originalPrice,
+  }: {
+    transactionType: TransactionType;
+    operation: OperationType;
+    price: number;
+    originalPrice?: number;
+  }): number {
+    const operationsMap = {
+      [TransactionType.INCOME]: {
+        [OperationType.INSERT]: price,
+        [OperationType.UPDATE]: price - originalPrice,
+        [OperationType.DELETE]: getNegativeNumber(price),
+      },
+      [TransactionType.EXPENSE]: {
+        [OperationType.INSERT]: getNegativeNumber(price),
+        [OperationType.UPDATE]: originalPrice - price,
+        [OperationType.DELETE]: price,
+      },
+      [TransactionType.INVOICE]: {
+        [OperationType.INSERT]: getNegativeNumber(price),
+        [OperationType.UPDATE]: originalPrice - price,
+        [OperationType.DELETE]: price,
+      },
+    };
+
+    return operationsMap[transactionType][operation];
+  }
 
   public async findAllCashFlowDayByDate(
     date: Date | FindOperator<Date>,
     userId: number,
   ): Promise<CashFlowDayEntity[]> {
-    const cashFlowDays = await this.cashFlowDayRepository.find({
-      where: {
-        date,
-        userId,
-      },
-    });
+    return await this.commonService.confirmTransaction(
+      async (entityManager) => {
+        const cashFlowDays = await entityManager.find(CashFlowDayEntity, {
+          where: {
+            date,
+            userId,
+          },
+        });
 
-    return cashFlowDays;
+        return cashFlowDays;
+      },
+    );
   }
 
   public async findCashFlowDayByDate(
     date: Date | FindOperator<Date>,
     userId: number,
   ): Promise<CashFlowDayEntity | null> {
-    const cashFlow = await this.cashFlowDayRepository.findOne({
-      where: {
-        date,
-        userId,
+    return await this.commonService.confirmTransaction(
+      async (entityManager) => {
+        const cashFlow = await entityManager.findOne(CashFlowDayEntity, {
+          where: {
+            date,
+            userId,
+          },
+        });
+
+        return cashFlow;
       },
-    });
-
-    return cashFlow;
+    );
   }
 
-  public async getMonthCashFlow(
-    date: string,
-    userId: number,
-  ): Promise<ICashFlowResponse> {
-    const [month, year] = date.split('-').map(Number);
-    const monthDate = new Date(year, month - 1);
-    const monthCalendarDates = getMonthCalendarDates(monthDate);
+  public async getMonthCashFlow({
+    monthYear,
+    userId,
+  }: {
+    monthYear: string;
+    userId: number;
+  }): Promise<ICashFlowResponse> {
+    try {
+      const [month, year] = monthYear.split('-').map(Number);
+      const monthDate = new Date(year, month - 1);
 
-    let formattedDailyCashFlow: TDailyCashFlow = {};
+      const fromDate = `${month}-${getFirstDayOfMonth(monthDate).getDate()}-${year}`;
+      const toDate = `${month}-${getLastDayOfMonth(monthDate).getDate()}-${year}`;
 
-    for (const date of monthCalendarDates) {
-      const dayCashFlow = await this.findCashFlowDayByDate(date, userId);
+      const incomes = this.mapIncomesToTransaction({
+        incomes: await this.incomeService.findByFilters({
+          fromDate,
+          toDate,
+          userId,
+        }),
+      });
+      const expenses = this.mapExpensesToTransaction({
+        expenses: await this.expensesService.findByFilters({
+          fromDate,
+          toDate,
+          userId,
+        }),
+      });
+      const invoices = this.mapInvoicesToTransaction({
+        invoices: await this.invoiceService.findByMonth(monthYear, userId),
+      });
 
-      formattedDailyCashFlow = {
-        ...formattedDailyCashFlow,
-        [date.toISOString()]: {
-          transactions: [],
-          openingBalance: dayCashFlow ? dayCashFlow.openingBalance : undefined,
-          closingBalance: dayCashFlow ? dayCashFlow.closingBalance : undefined,
-        },
+      const transactions = [...incomes, ...expenses, ...invoices];
+
+      let dailyCashFlow: TDailyCashFlow = {};
+      const monthCalendarDates = getMonthCalendarDates(monthDate);
+      const userTimezone = this.requestContext.getTimezone();
+
+      for (const date of monthCalendarDates) {
+        const userTimezonedDate = formatInTimezone(date, userTimezone);
+        const dayCashFlow = await this.findCashFlowDayByDate(date, userId);
+
+        dailyCashFlow = {
+          ...dailyCashFlow,
+          [userTimezonedDate]: {
+            transactions: transactions.filter(
+              ({ start: transactionDate }) =>
+                formatInTimezone(transactionDate, userTimezone) ===
+                userTimezonedDate,
+            ),
+            openingBalance: dayCashFlow
+              ? dayCashFlow.openingBalance
+              : undefined,
+            closingBalance: dayCashFlow
+              ? dayCashFlow.closingBalance
+              : undefined,
+          },
+        };
+      }
+
+      const monthCashFlow: ICashFlowResponse = {
+        dailyCashFlow: dailyCashFlow,
       };
+
+      const userBankAccounts =
+        await this.bankAccountService.findByUserId(userId);
+      if (userBankAccounts && userBankAccounts.length > 0) {
+        monthCashFlow.currentAccountsBalance = userBankAccounts.reduce(
+          (total, account) => total + account.currentBalance,
+          0,
+        );
+      }
+
+      return monthCashFlow;
+    } catch (error) {
+      this.logger.error('Error when getting the user Cash Flow: ', error);
+      throw error;
     }
-
-    const monthCashFlow: ICashFlowResponse = {
-      dailyCashFlow: formattedDailyCashFlow,
-    };
-
-    const userBankAccounts = await this.bankAccountService.findByUserId(userId);
-    if (userBankAccounts && userBankAccounts.length > 0) {
-      monthCashFlow.currentAccountsBalance = userBankAccounts.reduce(
-        (total, account) => total + account.currentBalance,
-        0,
-      );
-    }
-
-    return monthCashFlow;
   }
 
-  public async createCashFlowDaily(
+  public async createCashFlowDay(
     userId: number,
     date: Date,
   ): Promise<CashFlowDayEntity> {
@@ -99,6 +253,7 @@ export class CashFlowService {
       MoreThan(date),
       userId,
     );
+
     const previousBalance = previousCashFlow
       ? previousCashFlow.closingBalance
       : 0;
@@ -113,100 +268,98 @@ export class CashFlowService {
       date,
     });
 
-    await this.commonService.saveEntity(
-      this.cashFlowDayRepository,
-      newCashFlow,
+    return await this.commonService.confirmTransaction(
+      async (entityManager) => {
+        return await entityManager.save(CashFlowDayEntity, newCashFlow);
+      },
     );
-
-    return newCashFlow;
   }
 
-  public async updateFutureDaysBalanceFromDate(
-    date: Date,
-    userId: number,
-    value: number,
-  ): Promise<CashFlowDayEntity[]> {
+  public async updateFutureDaysBalanceFromDate({
+    date,
+    price,
+    userId,
+  }: {
+    date: Date;
+    price: number;
+    userId: number;
+  }): Promise<CashFlowDayEntity[]> {
     const cashFlowDays = await this.findAllCashFlowDayByDate(
       MoreThan(date),
       userId,
     );
 
     cashFlowDays.forEach(async (cashFlowDay) => {
-      cashFlowDay.openingBalance += value;
-      cashFlowDay.closingBalance += value;
+      cashFlowDay.openingBalance += price;
+      cashFlowDay.closingBalance += price;
     });
 
     return cashFlowDays;
   }
 
-  public async updateCashFlowDailyForTransactionType(
-    transactionType: TransactionType,
-    value: number,
-    cashFlow: CashFlowDayEntity,
-  ) {
+  public async updateCashFlowDayForTransactionType({
+    cashFlow,
+    transactionType,
+    operation,
+    price,
+    originalPrice,
+  }: {
+    transactionType: TransactionType;
+    price: number;
+    originalPrice: number;
+    cashFlow: CashFlowDayEntity;
+    operation: OperationType;
+  }): Promise<void> {
     const currentClosingBalance = Number(cashFlow.closingBalance);
-    let updatedFutureCashFlowDays: CashFlowDayEntity[] = [];
+    const transformedPrice = this.transformPriceByTransactionAndOperationType({
+      transactionType,
+      operation,
+      price,
+      originalPrice,
+    });
 
-    switch (transactionType) {
-      case TransactionType.INCOME:
-        cashFlow.closingBalance = currentClosingBalance + value;
-        updatedFutureCashFlowDays = await this.updateFutureDaysBalanceFromDate(
-          cashFlow.date,
-          cashFlow.userId,
-          value,
-        );
+    cashFlow.closingBalance = currentClosingBalance + transformedPrice;
+    const updatedFutureCashFlowDays =
+      await this.updateFutureDaysBalanceFromDate({
+        date: cashFlow.date,
+        userId: cashFlow.userId,
+        price: transformedPrice,
+      });
 
-        await this.commonService.startTransaction(async (entityManager) => {
-          await entityManager.save(CashFlowDayEntity, cashFlow);
-          await entityManager.save(
-            CashFlowDayEntity,
-            updatedFutureCashFlowDays,
-          );
-        });
-
-        break;
-      case TransactionType.INVOICE:
-      case TransactionType.EXPENSE:
-        cashFlow.closingBalance = currentClosingBalance - value;
-        updatedFutureCashFlowDays = await this.updateFutureDaysBalanceFromDate(
-          cashFlow.date,
-          cashFlow.userId,
-          this.commonService.getNegativeNumber(value),
-        );
-
-        await this.commonService.startTransaction(async (entityManager) => {
-          await entityManager.save(CashFlowDayEntity, cashFlow);
-          await entityManager.save(
-            CashFlowDayEntity,
-            updatedFutureCashFlowDays,
-          );
-        });
-
-        break;
-      default:
-        throw new InternalServerErrorException(
-          new Error('Unsupported transaction type for Cash Flow update.'),
-        );
-    }
+    await this.commonService.confirmTransaction(async (entityManager) => {
+      await entityManager.save(CashFlowDayEntity, [
+        cashFlow,
+        ...updatedFutureCashFlowDays,
+      ]);
+    });
   }
 
-  public async updateCashFlowForTransaction(
-    transaction: ITransactionCreatedMessage,
-  ) {
-    const { userId, timestamp, value, transactionType } = transaction;
+  public async updateCashFlowForTransaction({
+    transaction,
+    operation,
+  }: {
+    transaction: ITransactionCreatedMessage;
+    operation: OperationType;
+  }) {
+    await this.commonService.confirmTransaction(async () => {
+      const { userId, timestamp, price, originalPrice, transactionType } =
+        transaction;
 
-    const transactionDate = new Date(timestamp);
+      const transactionDate = new Date(timestamp);
 
-    let cashFlow = await this.findCashFlowDayByDate(transactionDate, userId);
+      let cashFlow = await this.findCashFlowDayByDate(transactionDate, userId);
 
-    if (!cashFlow) {
-      cashFlow = await this.createCashFlowDaily(userId, transactionDate);
-    }
+      if (!cashFlow) {
+        cashFlow = await this.createCashFlowDay(userId, transactionDate);
+      }
 
-    await this.updateCashFlowDailyForTransactionType(
-      transactionType,
-      Number(value),
-      cashFlow,
-    );
+      await this.updateCashFlowDayForTransactionType({
+        cashFlow,
+        transactionType,
+        operation,
+        price: Number(price),
+        originalPrice: Number(originalPrice),
+      });
+    });
   }
 }

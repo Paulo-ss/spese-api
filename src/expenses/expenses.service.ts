@@ -20,7 +20,7 @@ import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { CategoryService } from 'src/category/category.service';
 import { RedisPublisher } from 'src/async-worker/publisher/redis.publisher';
 import { ASYNC_WORKER } from 'src/common/constants/constants';
-import { TransactionType } from 'src/analytics/enums/transaction-type';
+import { TransactionType } from 'src/cash-flow/interfaces/transaction-type';
 import { ITransactionCreatedMessage } from 'src/async-worker/types/messages';
 
 @Injectable()
@@ -366,7 +366,7 @@ export class ExpensesService {
           userId: expense.userId,
           timestamp: expense.expenseDate.toISOString(),
           entityId: expense.id.toString(),
-          value: expense.price,
+          price: expense.price,
           description: expense.name,
           transactionType: TransactionType.EXPENSE,
         },
@@ -382,6 +382,7 @@ export class ExpensesService {
     updateDto: UpdateExpenseDto,
   ): Promise<ExpenseEntity> {
     const expense = await this.findById(expenseId, userId);
+    const originalPrice = expense.price;
 
     if (updateDto.category) {
       expense.category = updateDto.category;
@@ -404,6 +405,21 @@ export class ExpensesService {
     }
 
     await this.commonService.saveEntity(this.expensesRepository, expense);
+
+    if (!expense.creditCard) {
+      this.redisPublisher.publishToStream({
+        streamName: ASYNC_WORKER.REDIS_STREAMS.EXPENSE_UPDATED,
+        message: {
+          userId: expense.userId,
+          timestamp: expense.expenseDate.toISOString(),
+          entityId: expense.id.toString(),
+          price: expense.price,
+          originalPrice,
+          description: expense.name,
+          transactionType: TransactionType.EXPENSE,
+        },
+      });
+    }
 
     return expense;
   }

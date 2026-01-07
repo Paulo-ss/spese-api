@@ -6,6 +6,7 @@ export interface IUser {
   password: string;
   confirmed: boolean;
   accountSetup: boolean;
+  timezone: string;
   createdAt: string;
   updatedAt: string;
 }

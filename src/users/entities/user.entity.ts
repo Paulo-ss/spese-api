@@ -56,6 +56,9 @@ export class UserEntity implements IUser {
   @IsBoolean()
   public accountSetup: boolean;
 
+  @Column({ name: 'timezone', default: 'UTC' })
+  public timezone: string;
+
   @Column({ name: 'created_at' })
   public createdAt: string;
 
