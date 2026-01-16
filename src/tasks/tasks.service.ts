@@ -22,11 +22,11 @@ export class TasksService {
     }
 
     @Cron('0 0 1 2-4,18-20 * *', { timeZone: 'America/Sao_Paulo' })
-    public async markInvoicesAsDelayed() {
-        const delayedInvoices =
-            await this.invoiceService.markInvoicesAsDelayed();
+    public async markInvoicesAsOverdue() {
+        const overdueInvoices =
+            await this.invoiceService.markInvoicesAsOverdue();
 
-        this.notificationsDBService.emitDelayedInvoicesEvent(delayedInvoices);
+        this.notificationsDBService.emitDelayedInvoicesEvent(overdueInvoices);
     }
 
     @Cron(CronExpression.EVERY_1ST_DAY_OF_MONTH_AT_MIDNIGHT, {

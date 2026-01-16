@@ -1,4 +1,4 @@
-import { Inject, Injectable, forwardRef } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ExpenseEntity } from './entities/expense.entity';
 import { FindOptionsRelations, Repository } from 'typeorm';
@@ -10,22 +10,22 @@ import { BankAccountsService } from 'src/bank-accounts/bank-accounts.service';
 import { CreditCardsService } from 'src/credit-cards/credit-cards.service';
 import { BankAccountEntity } from 'src/bank-accounts/entities/bank.entity';
 import { InvoiceEntity } from 'src/credit-cards/entities/invoice.entity';
-import { isNull, isUndefined } from 'src/common/utils/validation.utils';
 import { InvoiceStatus } from 'src/credit-cards/enums/invoice-status.enum';
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
 import { ExpenseStatus } from './enums/expense-status.enum';
 import { ExpenseCategory } from './enums/expense-category.enum';
-import { getInvoiceMonth } from 'src/credit-cards/utils/get-invoice-month.util';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { CategoryService } from 'src/category/category.service';
 import { RedisPublisher } from 'src/async-worker/publisher/redis.publisher';
 import { ASYNC_WORKER } from 'src/common/constants/constants';
-import { TransactionType } from 'src/cash-flow/interfaces/transaction-type';
 import { ITransactionMessage } from 'src/async-worker/types/messages';
 import {
     getMonthAndDayAndYear,
     getMonthAndYear,
 } from '../common/utils/dates.utils';
+import { buildTransactionMessage } from '../async-worker/utils/messages.builders';
+import { CreditCardEntity } from '../credit-cards/entities/credit-card.entity';
+import { CategoryEntity } from '../category/entities/category.entity';
 
 @Injectable()
 export class ExpensesService {
@@ -57,32 +57,9 @@ export class ExpensesService {
             },
             relations,
         });
-        this.commonService.checkEntityExistence(expense, 'Despesa');
+        this.commonService.checkEntityExistence(expense, 'Expense');
 
         return expense;
-    }
-
-    public async findBySubscription(
-        subscriptionId: number,
-    ): Promise<ExpenseEntity[]> {
-        const expenses = await this.expensesRepository.find({
-            where: {
-                subscription: { id: subscriptionId },
-            },
-            relations: {
-                invoice: {
-                    creditCard: false,
-                    expenses: {
-                        bankAccount: false,
-                        creditCard: false,
-                        invoice: false,
-                        subscription: false,
-                    },
-                },
-            },
-        });
-
-        return expenses;
     }
 
     public async findByFilters(
@@ -177,6 +154,78 @@ export class ExpensesService {
             .getMany();
     }
 
+    public async createInstallmentExpenses({
+        createExpenseDto,
+        userId,
+        creditCard,
+        invoices,
+        bankAccount,
+        customCategory,
+    }: {
+        createExpenseDto: CreateExpenseDto;
+        userId: number;
+        creditCard: CreditCardEntity;
+        invoices: InvoiceEntity[];
+        bankAccount: BankAccountEntity | null;
+        customCategory: CategoryEntity | null;
+    }): Promise<void> {
+        const {
+            expenseType,
+            name,
+            price,
+            category,
+            customCategory: customCategoryId,
+            installments,
+            expenseDate,
+        } = createExpenseDto;
+
+        const installmentExpenses: ExpenseEntity[] = [];
+
+        for (let i = 1; i <= installments; i++) {
+            const nextMonthExpenseDate = new Date(expenseDate);
+            nextMonthExpenseDate.setMonth(
+                nextMonthExpenseDate.getMonth() + i - 1,
+            );
+
+            const installmentExpense = this.expensesRepository.create({
+                expenseType,
+                status:
+                    invoices[i - 1].status === InvoiceStatus.PAID
+                        ? ExpenseStatus.PAID
+                        : ExpenseStatus.PENDING,
+                name,
+                price,
+                bankAccount,
+                creditCard,
+                category,
+                customCategory: customCategoryId ? customCategory : null,
+                invoice: invoices[i - 1],
+                installmentNumber: i,
+                totalInstallments: installments,
+                userId,
+                expenseDate:
+                    i === 1 ? new Date(expenseDate) : nextMonthExpenseDate,
+            });
+
+            const savedExpense = await this.commonService.saveEntity(
+                this.expensesRepository,
+                installmentExpense,
+            );
+            installmentExpenses.push(savedExpense);
+        }
+
+        void this.redisPublisher.batchPublishToStream({
+            streamName: ASYNC_WORKER.REDIS_STREAMS.EXPENSE_CREATED,
+            messages: installmentExpenses.map((expense) =>
+                buildTransactionMessage({
+                    transaction: expense,
+                    userId: expense.userId,
+                    bankAccountId: expense.bankAccount?.id,
+                }),
+            ),
+        });
+    }
+
     public async create(
         createExpenseDto: CreateExpenseDto,
         userId: number,
@@ -194,10 +243,14 @@ export class ExpensesService {
             status,
         } = createExpenseDto;
 
-        let bankAccount: BankAccountEntity = null;
-        if (bankAccountId) {
+        const creditCard = creditCardId
+            ? await this.creditCardService.findById(creditCardId, userId)
+            : null;
+
+        let bankAccount: BankAccountEntity | null = null;
+        if (bankAccountId || (creditCard && creditCard.bankAccount)) {
             bankAccount = await this.bankAccountService.findById(
-                bankAccountId,
+                bankAccountId ?? creditCard.bankAccount.id,
                 userId,
             );
         }
@@ -208,161 +261,27 @@ export class ExpensesService {
             false,
         );
 
-        const creditCard = creditCardId
-            ? await this.creditCardService.findById(creditCardId, userId)
-            : null;
+        const invoices: InvoiceEntity[] = creditCard
+            ? await this.invoiceService.createInvoicesForExpense({
+                  creditCard,
+                  expenseDate,
+                  installments,
+              })
+            : [];
 
-        if (bankAccount === null && creditCard && creditCard.bankAccount) {
-            bankAccount = await this.bankAccountService.findById(
-                creditCard.bankAccount.id,
+        if (installments) {
+            await this.createInstallmentExpenses({
+                createExpenseDto,
                 userId,
+                creditCard,
+                invoices,
+                bankAccount,
+                customCategory,
+            });
+
+            return this.commonService.generateGenericMessageResponse(
+                `Successfully created expenses split in ${installments} installments.`,
             );
-        }
-
-        let invoice: InvoiceEntity = null;
-        const invoices: InvoiceEntity[] = [];
-
-        if (creditCard) {
-            const today = new Date();
-
-            invoice = await this.invoiceService.findByMonthAndCreditCard(
-                creditCardId,
-                creditCard.closingDay,
-                new Date(expenseDate),
-            );
-
-            if (isNull(invoice) || isUndefined(invoice)) {
-                const { month, year } = getInvoiceMonth(
-                    creditCard.closingDay,
-                    new Date(expenseDate),
-                );
-
-                let invoiceStatus: InvoiceStatus = InvoiceStatus.PAID;
-
-                if (
-                    (month > today.getMonth() &&
-                        year === today.getFullYear()) ||
-                    year > today.getFullYear()
-                ) {
-                    invoiceStatus = InvoiceStatus.OPENED_FUTURE;
-                }
-
-                const { month: currentInvoiceMonth, year: currentInvoiceYear } =
-                    getInvoiceMonth(creditCard.closingDay, new Date());
-                if (
-                    month === currentInvoiceMonth &&
-                    year === currentInvoiceYear
-                ) {
-                    invoiceStatus = InvoiceStatus.OPENED_CURRENT;
-                }
-
-                invoice = await this.invoiceService.create({
-                    creditCard,
-                    invoiceDate: new Date(expenseDate),
-                    status: invoiceStatus,
-                });
-            }
-
-            invoices.push(invoice);
-
-            if (installments) {
-                for (let i = 1; i <= installments - 1; i++) {
-                    const previousInvoice = invoices[i - 1];
-                    const nextInvoiceDate = new Date(
-                        previousInvoice.closingDate,
-                    );
-                    nextInvoiceDate.setMonth(nextInvoiceDate.getMonth() + 1);
-
-                    let installmentInvoice =
-                        await this.invoiceService.findByMonthAndCreditCard(
-                            creditCardId,
-                            creditCard.closingDay,
-                            new Date(previousInvoice.closingDate),
-                        );
-
-                    if (
-                        isNull(installmentInvoice) ||
-                        isUndefined(installmentInvoice)
-                    ) {
-                        const { month, year } = getInvoiceMonth(
-                            creditCard.closingDay,
-                            new Date(previousInvoice.closingDate),
-                        );
-
-                        let invoiceStatus = InvoiceStatus.PAID;
-
-                        if (
-                            (month > today.getMonth() &&
-                                year === today.getFullYear()) ||
-                            year > today.getFullYear()
-                        ) {
-                            invoiceStatus = InvoiceStatus.OPENED_FUTURE;
-                        }
-
-                        const {
-                            month: currentInvoiceMonth,
-                            year: currentInvoiceYear,
-                        } = getInvoiceMonth(creditCard.closingDay, new Date());
-                        if (
-                            month === currentInvoiceMonth &&
-                            year === currentInvoiceYear
-                        ) {
-                            invoiceStatus = InvoiceStatus.OPENED_CURRENT;
-                        }
-
-                        installmentInvoice = await this.invoiceService.create({
-                            creditCard,
-                            invoiceDate: new Date(
-                                nextInvoiceDate.getFullYear(),
-                                nextInvoiceDate.getMonth(),
-                            ),
-                            status: invoiceStatus,
-                        });
-                    }
-
-                    invoices.push(installmentInvoice);
-                }
-
-                for (let i = 1; i <= installments; i++) {
-                    const nextMonthExpenseDate = new Date(expenseDate);
-                    nextMonthExpenseDate.setMonth(
-                        nextMonthExpenseDate.getMonth() + i - 1,
-                    );
-
-                    const installmentExpense = this.expensesRepository.create({
-                        expenseType,
-                        status:
-                            invoices[i - 1].status === InvoiceStatus.PAID
-                                ? ExpenseStatus.PAID
-                                : ExpenseStatus.PENDING,
-                        name,
-                        price,
-                        bankAccount,
-                        creditCard,
-                        category,
-                        customCategory: customCategoryId
-                            ? customCategory
-                            : null,
-                        invoice: invoices[i - 1],
-                        installmentNumber: i,
-                        totalInstallments: installments,
-                        userId,
-                        expenseDate:
-                            i === 1
-                                ? new Date(expenseDate)
-                                : nextMonthExpenseDate,
-                    });
-
-                    await this.commonService.saveEntity(
-                        this.expensesRepository,
-                        installmentExpense,
-                    );
-                }
-
-                return this.commonService.generateGenericMessageResponse(
-                    `Despesa criada com sucesso em ${installments} parcelas.`,
-                );
-            }
         }
 
         const expense = this.expensesRepository.create({
@@ -381,23 +300,14 @@ export class ExpensesService {
 
         await this.commonService.saveEntity(this.expensesRepository, expense);
 
-        /**
-         * Only publish to the stream if the expense is not a credit card expense,
-         * because if it is, we'll handle it on the invoice subscriber.
-         */
-        if (!creditCard) {
-            this.redisPublisher.publishToStream({
-                streamName: ASYNC_WORKER.REDIS_STREAMS.EXPENSE_CREATED,
-                message: {
-                    userId: expense.userId,
-                    timestamp: expense.expenseDate.toISOString(),
-                    entityId: expense.id.toString(),
-                    price: expense.price,
-                    description: expense.name,
-                    transactionType: TransactionType.EXPENSE,
-                },
-            });
-        }
+        void this.redisPublisher.publishToStream({
+            streamName: ASYNC_WORKER.REDIS_STREAMS.EXPENSE_CREATED,
+            message: buildTransactionMessage({
+                transaction: expense,
+                userId: expense.userId,
+                bankAccountId: expense.bankAccount?.id,
+            }),
+        });
 
         return expense;
     }
@@ -415,11 +325,10 @@ export class ExpensesService {
         }
 
         if (updateDto.customCategory) {
-            const customCategory = await this.categoryService.findById(
+            expense.customCategory = await this.categoryService.findById(
                 updateDto.customCategory,
                 userId,
             );
-            expense.customCategory = customCategory;
         }
 
         if (updateDto.price) {
@@ -432,20 +341,15 @@ export class ExpensesService {
 
         await this.commonService.saveEntity(this.expensesRepository, expense);
 
-        if (!expense.creditCard) {
-            this.redisPublisher.publishToStream({
-                streamName: ASYNC_WORKER.REDIS_STREAMS.EXPENSE_UPDATED,
-                message: {
-                    userId: expense.userId,
-                    timestamp: expense.expenseDate.toISOString(),
-                    entityId: expense.id.toString(),
-                    price: expense.price,
-                    originalPrice,
-                    description: expense.name,
-                    transactionType: TransactionType.EXPENSE,
-                },
-            });
-        }
+        void this.redisPublisher.publishToStream({
+            streamName: ASYNC_WORKER.REDIS_STREAMS.EXPENSE_UPDATED,
+            message: buildTransactionMessage({
+                transaction: expense,
+                userId: expense.userId,
+                bankAccountId: expense.bankAccount?.id,
+                originalPrice,
+            }),
+        });
 
         return expense;
     }
@@ -459,7 +363,7 @@ export class ExpensesService {
         });
 
         return this.commonService.generateGenericMessageResponse(
-            `Despesa paga!`,
+            `Expense paid!`,
         );
     }
 
@@ -471,20 +375,17 @@ export class ExpensesService {
 
         await this.commonService.removeEntity(this.expensesRepository, expense);
 
-        this.redisPublisher.publishToStream({
+        void this.redisPublisher.publishToStream({
             streamName: ASYNC_WORKER.REDIS_STREAMS.EXPENSE_DELETED,
-            message: {
+            message: buildTransactionMessage({
+                transaction: expense,
                 userId: expense.userId,
-                timestamp: expense.expenseDate.toISOString(),
-                entityId: expense.id.toString(),
-                price: expense.price,
-                description: expense.name,
-                transactionType: TransactionType.EXPENSE,
-            },
+                bankAccountId: expense.bankAccount?.id,
+            }),
         });
 
         return this.commonService.generateGenericMessageResponse(
-            'Despesa deletada com sucesso!',
+            'Successfully deleted expense!',
         );
     }
 }

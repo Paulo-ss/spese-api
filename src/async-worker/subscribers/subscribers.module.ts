@@ -6,22 +6,29 @@ import { CashFlowModule } from 'src/cash-flow/cash-flow.module';
 import { IBaseMessage } from '../types/messages';
 import { ExpenseUpdatedSubscriber } from './implementations/expense/expense-updated.subscriber';
 import { ExpenseDeletedSubscriber } from './implementations/expense/expense-deleted.subscriber';
+import { IncomeCreatedSubscriber } from './implementations/incomes/income-created.subscriber';
+import { IncomeUpdatedSubscriber } from './implementations/incomes/income-updated.subscriber';
+import { IncomeDeletedSubscriber } from './implementations/incomes/income-deleted.subscriber';
+import { BankAccountsModule } from '../../bank-accounts/bank-accounts.module';
+
+const ALL_SUBSCRIBERS = [
+    ExpenseCreatedSubscriber,
+    ExpenseUpdatedSubscriber,
+    ExpenseDeletedSubscriber,
+    IncomeCreatedSubscriber,
+    IncomeUpdatedSubscriber,
+    IncomeDeletedSubscriber,
+];
 
 @Module({
-    imports: [CashFlowModule],
+    imports: [CashFlowModule, BankAccountsModule],
     providers: [
-        ExpenseCreatedSubscriber,
-        ExpenseUpdatedSubscriber,
-        ExpenseDeletedSubscriber,
+        ...ALL_SUBSCRIBERS,
         {
             provide: DEPENDENCY_INJECTION_PROVIDERS.ASYNC_WORKER_SUBSCRIBERS,
             useFactory: (...subscribers: ISubscriber<IBaseMessage>[]) =>
                 subscribers,
-            inject: [
-                ExpenseCreatedSubscriber,
-                ExpenseUpdatedSubscriber,
-                ExpenseDeletedSubscriber,
-            ],
+            inject: [...ALL_SUBSCRIBERS],
         },
     ],
     exports: [
@@ -29,11 +36,7 @@ import { ExpenseDeletedSubscriber } from './implementations/expense/expense-dele
             provide: DEPENDENCY_INJECTION_PROVIDERS.ASYNC_WORKER_SUBSCRIBERS,
             useFactory: (...subscribers: ISubscriber<IBaseMessage>[]) =>
                 subscribers,
-            inject: [
-                ExpenseCreatedSubscriber,
-                ExpenseUpdatedSubscriber,
-                ExpenseDeletedSubscriber,
-            ],
+            inject: [...ALL_SUBSCRIBERS],
         },
     ],
 })

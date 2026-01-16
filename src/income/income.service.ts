@@ -17,8 +17,7 @@ import {
 import { RedisPublisher } from '../async-worker/publisher/redis.publisher';
 import { ITransactionMessage } from '../async-worker/types/messages';
 import { ASYNC_WORKER } from '../common/constants/constants';
-import { TransactionType } from '../cash-flow/interfaces/transaction-type';
-import { buildTransactionMessages } from '../async-worker/utils/messages.builders';
+import { buildTransactionMessage } from '../async-worker/utils/messages.builders';
 
 @Injectable()
 export class IncomeService {
@@ -44,7 +43,7 @@ export class IncomeService {
                 bankAccount: { expenses: false },
             },
         });
-        this.commonService.checkEntityExistence(income, 'Renda');
+        this.commonService.checkEntityExistence(income, 'Income');
 
         return income;
     }
@@ -125,12 +124,12 @@ export class IncomeService {
 
         await this.commonService.saveEntity(this.incomesRepository, newIncome);
 
-        this.redisPublisher.publishToStream({
+        void this.redisPublisher.publishToStream({
             streamName: ASYNC_WORKER.REDIS_STREAMS.INCOME_CREATED,
-            message: buildTransactionMessages({
-                transactions: newIncome,
+            message: buildTransactionMessage({
+                transaction: newIncome,
                 userId: newIncome.userId,
-            }) as ITransactionMessage,
+            }),
         });
 
         return newIncome;
@@ -157,18 +156,13 @@ export class IncomeService {
             income,
         );
 
-        this.redisPublisher.publishToStream({
+        void this.redisPublisher.publishToStream({
             streamName: ASYNC_WORKER.REDIS_STREAMS.INCOME_UPDATED,
-            message: {
+            message: buildTransactionMessage({
+                transaction: updatedIncome,
                 userId: updatedIncome.userId,
-                price: updatedIncome.price,
                 originalPrice,
-                bankAccountId: updatedIncome.bankAccount?.id,
-                description: updatedIncome.title,
-                entityId: updatedIncome.id.toString(),
-                timestamp: updatedIncome.incomeMonth.toISOString(),
-                transactionType: TransactionType.INCOME,
-            },
+            }),
         });
 
         return updatedIncome;
@@ -182,8 +176,16 @@ export class IncomeService {
 
         await this.commonService.removeEntity(this.incomesRepository, income);
 
+        void this.redisPublisher.publishToStream({
+            streamName: ASYNC_WORKER.REDIS_STREAMS.INCOME_DELETED,
+            message: buildTransactionMessage({
+                transaction: income,
+                userId: income.userId,
+            }),
+        });
+
         return this.commonService.generateGenericMessageResponse(
-            'Renda deletada com sucesso.',
+            'Successfully deleted income.',
         );
     }
 }

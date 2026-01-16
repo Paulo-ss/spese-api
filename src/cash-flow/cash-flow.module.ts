@@ -9,15 +9,15 @@ import { IncomeModule } from 'src/income/income.module';
 import { CreditCardsModule } from 'src/credit-cards/credit-cards.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([CashFlowDayEntity]),
-    BankAccountsModule,
-    forwardRef(() => ExpensesModule),
-    IncomeModule,
-    CreditCardsModule,
-  ],
-  controllers: [CashFlowController],
-  providers: [CashFlowService],
-  exports: [CashFlowService],
+    imports: [
+        TypeOrmModule.forFeature([CashFlowDayEntity]),
+        forwardRef(() => BankAccountsModule),
+        forwardRef(() => ExpensesModule),
+        forwardRef(() => IncomeModule),
+        forwardRef(() => CreditCardsModule),
+    ],
+    controllers: [CashFlowController],
+    providers: [CashFlowService],
+    exports: [CashFlowService],
 })
 export class CashFlowModule {}

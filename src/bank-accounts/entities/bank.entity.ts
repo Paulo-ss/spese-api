@@ -1,42 +1,42 @@
 import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  OneToMany,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
+    Column,
+    CreateDateColumn,
+    Entity,
+    OneToMany,
+    PrimaryGeneratedColumn,
+    UpdateDateColumn,
 } from 'typeorm';
 import { IBankAccount } from '../interfaces/bank-account.interface';
 import { Banks } from '../enums/banks.enum';
 import { ExpenseEntity } from 'src/expenses/entities/expense.entity';
-import { ColumnNumericTransformer } from 'src/common/transformers/column-numeric-transformer.transformer';
+import { NumericColumnTransformer } from 'src/common/transformers/column-numeric-transformer.transformer';
 
 @Entity({ name: 'bank_accounts' })
 export class BankAccountEntity implements IBankAccount {
-  @PrimaryGeneratedColumn()
-  public id: number;
+    @PrimaryGeneratedColumn()
+    public id: number;
 
-  @Column({ name: 'bank', enum: Banks })
-  public bank: Banks;
+    @Column({ name: 'bank', enum: Banks })
+    public bank: Banks;
 
-  @Column('decimal', {
-    name: 'current_balance',
-    precision: 10,
-    scale: 2,
-    nullable: true,
-    transformer: new ColumnNumericTransformer(),
-  })
-  public currentBalance?: number;
+    @Column('decimal', {
+        name: 'current_balance',
+        precision: 10,
+        scale: 2,
+        nullable: true,
+        transformer: new NumericColumnTransformer(),
+    })
+    public currentBalance?: number;
 
-  @Column({ name: 'user_id' })
-  public userId: number;
+    @Column({ name: 'user_id' })
+    public userId: number;
 
-  @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
-  public createdAt: Date;
+    @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
+    public createdAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamp', name: 'updated_at' })
-  public updatedAt: Date;
+    @UpdateDateColumn({ type: 'timestamp', name: 'updated_at' })
+    public updatedAt: Date;
 
-  @OneToMany(() => ExpenseEntity, (expense) => expense.bankAccount)
-  public expenses?: ExpenseEntity[];
+    @OneToMany(() => ExpenseEntity, (expense) => expense.bankAccount)
+    public expenses?: ExpenseEntity[];
 }

@@ -9,15 +9,15 @@ import { CategoryModule } from 'src/category/category.module';
 import { AsyncWorkerModule } from 'src/async-worker/async-worker.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([ExpenseEntity]),
-    forwardRef(() => CreditCardsModule),
-    BankAccountsModule,
-    CategoryModule,
-    AsyncWorkerModule,
-  ],
-  controllers: [ExpensesController],
-  providers: [ExpensesService],
-  exports: [ExpensesService],
+    imports: [
+        TypeOrmModule.forFeature([ExpenseEntity]),
+        forwardRef(() => CreditCardsModule),
+        BankAccountsModule,
+        CategoryModule,
+        forwardRef(() => AsyncWorkerModule),
+    ],
+    controllers: [ExpensesController],
+    providers: [ExpensesService],
+    exports: [ExpensesService],
 })
 export class ExpensesModule {}

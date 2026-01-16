@@ -10,7 +10,7 @@ import { BankAccountEntity } from 'src/bank-accounts/entities/bank.entity';
 import { IBankAccount } from 'src/bank-accounts/interfaces/bank-account.interface';
 import { ITransaction } from 'src/cash-flow/interfaces/cash-flow.interface';
 import { TransactionType } from 'src/cash-flow/interfaces/transaction-type';
-import { ColumnNumericTransformer } from '../../common/transformers/column-numeric-transformer.transformer';
+import { NumericColumnTransformer } from '../../common/transformers/column-numeric-transformer.transformer';
 
 @Entity({ name: 'incomes' })
 export class IncomeEntity implements IIncome, ITransaction {
@@ -24,14 +24,14 @@ export class IncomeEntity implements IIncome, ITransaction {
         name: 'value',
         precision: 10,
         scale: 2,
-        transformer: new ColumnNumericTransformer(),
+        transformer: new NumericColumnTransformer(),
     })
     public value: number;
 
     @ManyToOne(() => BankAccountEntity, { nullable: true })
     public bankAccount?: IBankAccount;
 
-    @Column({ name: 'user_id', transformer: new ColumnNumericTransformer() })
+    @Column({ name: 'user_id', transformer: new NumericColumnTransformer() })
     public userId: number;
 
     @Column('timestamp', {
