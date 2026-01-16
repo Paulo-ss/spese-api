@@ -12,9 +12,11 @@ import { CreditCardEntity } from './credit-card.entity';
 import { ExpenseEntity } from 'src/expenses/entities/expense.entity';
 import { InvoiceStatus } from '../enums/invoice-status.enum';
 import { ColumnNumericTransformer } from 'src/common/transformers/column-numeric-transformer.transformer';
+import { ITransaction } from 'src/cash-flow/interfaces/cash-flow.interface';
+import { TransactionType } from 'src/cash-flow/interfaces/transaction-type';
 
 @Entity({ name: 'invoices' })
-export class InvoiceEntity implements IInvoice {
+export class InvoiceEntity implements IInvoice, ITransaction {
   @PrimaryGeneratedColumn()
   public id: number;
 
@@ -59,4 +61,28 @@ export class InvoiceEntity implements IInvoice {
 
   @Column({ name: 'user_id' })
   public userId: number;
+
+  get entityId(): number {
+    return this.id;
+  }
+
+  get type(): TransactionType {
+    return TransactionType.INVOICE;
+  }
+
+  get price(): number {
+    return this.currentPrice;
+  }
+
+  get title(): string {
+    return `Fatura ${this.dueDate} ${this.creditCard.lastFourDigits}`;
+  }
+
+  get start(): Date {
+    return this.dueDate;
+  }
+
+  get end(): Date {
+    return this.dueDate;
+  }
 }

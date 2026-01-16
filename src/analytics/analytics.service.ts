@@ -12,6 +12,7 @@ import {
   IDonutChartReportResponse,
 } from './interfaces/reports-responses.interface';
 import { ExpenseCategory } from 'src/expenses/enums/expense-category.enum';
+import { getMonthAndYear } from '../common/utils/dates.utils';
 
 @Injectable()
 export class AnalyticsService {
@@ -26,10 +27,10 @@ export class AnalyticsService {
     toDate?: string,
   ): string[] {
     const monthsRange: string[] = [];
-    const [month, year] = fromDate.split('-').map(Number);
+    const [month, year] = getMonthAndYear(fromDate);
 
     if (!isEmpty(toDate)) {
-      const [toMonth, toYear] = toDate.split('-').map(Number);
+      const [toMonth, toYear] = getMonthAndYear(toDate);
 
       for (
         const date = new Date(year, month - 1);

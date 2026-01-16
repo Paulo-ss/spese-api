@@ -19,9 +19,11 @@ import { CategoryEntity } from 'src/category/entities/category.entity';
 import { ISubscription } from 'src/credit-cards/interfaces/subscription.interface';
 import { SubscriptionEntity } from 'src/credit-cards/entities/subscription.entity';
 import { ICategory } from 'src/category/interfaces/category.interface';
+import { ITransaction } from 'src/cash-flow/interfaces/cash-flow.interface';
+import { TransactionType } from 'src/cash-flow/interfaces/transaction-type';
 
 @Entity({ name: 'expenses' })
-export class ExpenseEntity implements IExpense {
+export class ExpenseEntity implements IExpense, ITransaction {
   @PrimaryGeneratedColumn()
   public id: number;
 
@@ -84,4 +86,24 @@ export class ExpenseEntity implements IExpense {
     name: 'updated_at',
   })
   public updatedAt: Date;
+
+  get entityId(): number {
+    return this.id;
+  }
+
+  get type(): TransactionType {
+    return TransactionType.INVOICE;
+  }
+
+  get title(): string {
+    return this.name;
+  }
+
+  get start(): Date {
+    return this.expenseDate;
+  }
+
+  get end(): Date {
+    return this.expenseDate;
+  }
 }

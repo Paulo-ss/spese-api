@@ -10,6 +10,7 @@ import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-r
 import { isEmpty } from 'class-validator';
 import { InvoiceStatus } from './enums/invoice-status.enum';
 import { BankAccountsService } from 'src/bank-accounts/bank-accounts.service';
+import { getMonthAndYear } from '../common/utils/dates.utils';
 
 @Injectable()
 export class CreditCardsService {
@@ -72,7 +73,7 @@ export class CreditCardsService {
       return { paidInvoicesTotal: 0, invoicesTotal: 0 };
     }
 
-    const [month, year] = selectedMonth.split('-').map(Number);
+    const [month, year] = getMonthAndYear(selectedMonth);
     const firstDayOfTheMonth = new Date(year, month - 1);
 
     let invoicesTotal = 0;

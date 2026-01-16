@@ -9,7 +9,10 @@ import { InvoiceStatus } from './enums/invoice-status.enum';
 import { getInvoiceMonth } from './utils/get-invoice-month.util';
 import { ExpensesService } from 'src/expenses/expenses.service';
 import { ClosedInvoicesDto } from './dto/closed-invoices.dto';
-import { getNextBusinessDay } from 'src/common/utils/dates.utils';
+import {
+  getMonthAndYear,
+  getNextBusinessDay,
+} from 'src/common/utils/dates.utils';
 
 @Injectable()
 export class InvoiceService {
@@ -44,7 +47,7 @@ export class InvoiceService {
     month: string,
     userId: number,
   ): Promise<InvoiceEntity[]> {
-    const [fromMonth, fromYear] = month.split('-').map(Number);
+    const [fromMonth, fromYear] = getMonthAndYear(month);
     const firstDayOfTheMonth = new Date(fromYear, fromMonth - 1);
     const lastDayOfTheMonth = new Date(fromYear, fromMonth, 0);
 
