@@ -6,12 +6,16 @@ import { CashFlowService } from 'src/cash-flow/cash-flow.service';
 import { ITransactionMessage } from 'src/async-worker/types/messages';
 import { OperationType } from 'src/common/interfaces/operation-type';
 import { BankAccountsService } from '../../../../bank-accounts/bank-accounts.service';
+import { CommonService } from '../../../../common/common.service';
+import { InvoiceService } from '../../../../credit-cards/invoice.service';
 
 @Injectable()
 export class ExpenseUpdatedSubscriber extends BaseSubscriber<ITransactionMessage> {
     constructor(
+        private readonly commonService: CommonService,
         private readonly cashFlowService: CashFlowService,
         private readonly bankAccountService: BankAccountsService,
+        private readonly invoiceService: InvoiceService,
     ) {
         super();
     }
@@ -35,13 +39,21 @@ export class ExpenseUpdatedSubscriber extends BaseSubscriber<ITransactionMessage
                 expense,
             );
 
-            await this.cashFlowService.updateCashFlowForTransaction({
-                transaction: expense,
-                operation: OperationType.UPDATE,
-            });
-            await this.bankAccountService.updateCurrentBalanceForTransaction({
-                transaction: expense,
-                operation: OperationType.UPDATE,
+            await this.commonService.confirmTransaction(async () => {
+                await this.cashFlowService.updateCashFlowForTransaction({
+                    transaction: expense,
+                    operation: OperationType.UPDATE,
+                });
+                await this.bankAccountService.updateCurrentBalanceForTransaction(
+                    {
+                        transaction: expense,
+                        operation: OperationType.UPDATE,
+                    },
+                );
+                await this.invoiceService.updateInvoiceForTransaction({
+                    transaction: expense,
+                    operation: OperationType.UPDATE,
+                });
             });
         } catch (error) {
             this.logger.error('EXPENSE UPDATED SUBSCRIBER ERROR: ', { error });

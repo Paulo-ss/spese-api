@@ -8,7 +8,6 @@ import { IncomeModule } from './income/income.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
-import { BullModule } from '@nestjs/bull';
 import { ExpenseEntity } from './expenses/entities/expense.entity';
 import { IncomeEntity } from './income/entities/income.entity';
 import { BankAccountEntity } from './bank-accounts/entities/bank.entity';
@@ -43,71 +42,68 @@ import { AsyncWorkerModule } from './async-worker/async-worker.module';
 import { ClsModule } from 'nestjs-cls';
 
 @Module({
-  imports: [
-    ConfigModule.forRoot({ isGlobal: true, validationSchema, load: [config] }),
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: process.env.POSTGRES_HOST,
-      port: Number(process.env.POSTGRES_PORT),
-      username: process.env.POSTGRES_USER,
-      password: process.env.POSTGRES_PASSWORD,
-      database: process.env.POSTGRES_DB,
-      entities: [
-        ExpenseEntity,
-        IncomeEntity,
-        BankAccountEntity,
-        CreditCardEntity,
-        InvoiceEntity,
-        SubscriptionEntity,
-        ReportEntity,
-        UserEntity,
-        BlacklistedTokenEntity,
-        ReportEntity,
-        NotificationEntity,
-        CategoryEntity,
-        CashFlowDayEntity,
-      ],
-      synchronize: !JSON.parse(process.env.IS_PRODUCTION),
-    }),
-    ScheduleModule.forRoot(),
-    BullModule.forRoot({
-      redis: {
-        host: process.env.REDIS_HOST,
-        port: JSON.parse(process.env.REDIS_PORT),
-        password: process.env.REDIS_PASSWORD,
-      },
-    }),
-    ClsModule.forRoot({
-      global: true,
-      middleware: {
-        mount: true,
-      },
-    }),
-    UsersModule,
-    AuthModule,
-    BankAccountsModule,
-    IncomeModule,
-    CreditCardsModule,
-    ExpensesModule,
-    AnalyticsModule,
-    CommonModule,
-    NotificationsModule,
-    CategoryModule,
-    TasksModule,
-    CashFlowModule,
-    AsyncWorkerModule,
-  ],
-  controllers: [
-    AppController,
-    UsersController,
-    AnalyticsController,
-    CreditCardsController,
-    ExpensesController,
-    IncomeController,
-    AuthController,
-    NotificationsController,
-    ReportsController,
-  ],
-  providers: [AppService],
+    imports: [
+        ConfigModule.forRoot({
+            isGlobal: true,
+            validationSchema,
+            load: [config],
+        }),
+        TypeOrmModule.forRoot({
+            type: 'postgres',
+            host: process.env.POSTGRES_HOST,
+            port: Number(process.env.POSTGRES_PORT),
+            username: process.env.POSTGRES_USER,
+            password: process.env.POSTGRES_PASSWORD,
+            database: process.env.POSTGRES_DB,
+            entities: [
+                ExpenseEntity,
+                IncomeEntity,
+                BankAccountEntity,
+                CreditCardEntity,
+                InvoiceEntity,
+                SubscriptionEntity,
+                ReportEntity,
+                UserEntity,
+                BlacklistedTokenEntity,
+                ReportEntity,
+                NotificationEntity,
+                CategoryEntity,
+                CashFlowDayEntity,
+            ],
+            synchronize: !JSON.parse(process.env.IS_PRODUCTION),
+        }),
+        ScheduleModule.forRoot(),
+        ClsModule.forRoot({
+            global: true,
+            middleware: {
+                mount: true,
+            },
+        }),
+        UsersModule,
+        AuthModule,
+        BankAccountsModule,
+        IncomeModule,
+        CreditCardsModule,
+        ExpensesModule,
+        AnalyticsModule,
+        CommonModule,
+        NotificationsModule,
+        CategoryModule,
+        TasksModule,
+        CashFlowModule,
+        AsyncWorkerModule,
+    ],
+    controllers: [
+        AppController,
+        UsersController,
+        AnalyticsController,
+        CreditCardsController,
+        ExpensesController,
+        IncomeController,
+        AuthController,
+        NotificationsController,
+        ReportsController,
+    ],
+    providers: [AppService],
 })
 export class AppModule {}

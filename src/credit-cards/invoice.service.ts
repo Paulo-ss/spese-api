@@ -10,11 +10,15 @@ import { getInvoiceMonth } from './utils/get-invoice-month.util';
 import { ExpensesService } from 'src/expenses/expenses.service';
 import { ClosedInvoicesDto } from './dto/closed-invoices.dto';
 import {
-    getMonthAndYear,
+    getYearAndMonth,
     getNextBusinessDay,
+    getFirstDayOfMonth,
+    getLastDayOfMonth,
 } from 'src/common/utils/dates.utils';
 import { isNull } from '../common/utils/validation.utils';
 import { CreditCardEntity } from './entities/credit-card.entity';
+import { ITransactionMessage } from '../async-worker/types/messages';
+import { OperationType } from '../common/interfaces/operation-type';
 
 @Injectable()
 export class InvoiceService {
@@ -54,12 +58,11 @@ export class InvoiceService {
     }
 
     public async findByMonth(
-        month: string,
+        date: string,
         userId: number,
     ): Promise<InvoiceEntity[]> {
-        const [fromMonth, fromYear] = getMonthAndYear(month);
-        const firstDayOfTheMonth = new Date(fromYear, fromMonth - 1);
-        const lastDayOfTheMonth = new Date(fromYear, fromMonth, 0);
+        const firstDayOfTheMonth = getFirstDayOfMonth(date);
+        const lastDayOfTheMonth = getLastDayOfMonth(date);
 
         return await this.invoiceRepository
             .createQueryBuilder('invoice')
@@ -337,5 +340,39 @@ export class InvoiceService {
         }
 
         return overdueInvoices.map(ClosedInvoicesDto.entityToDto);
+    }
+
+    public async updateInvoiceForTransaction({
+        transaction,
+        operation,
+    }: {
+        transaction: ITransactionMessage;
+        operation: OperationType;
+    }) {
+        await this.commonService.confirmTransaction(async (entityManager) => {
+            const { invoiceId, transactionType, originalPrice, price } =
+                transaction;
+
+            const invoice = await entityManager.findOne(InvoiceEntity, {
+                where: { id: invoiceId },
+            });
+
+            if (invoice) {
+                const transformedPrice =
+                    this.commonService.transformPriceByTransactionAndOperationType(
+                        {
+                            transactionType,
+                            operation,
+                            price,
+                            originalPrice,
+                        },
+                    );
+
+                invoice.currentPrice += transformedPrice;
+                invoice.totalPrice += transformedPrice;
+
+                await entityManager.save(InvoiceEntity, invoice);
+            }
+        });
     }
 }

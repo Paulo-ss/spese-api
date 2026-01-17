@@ -8,214 +8,193 @@ import { IncomeService } from 'src/income/income.service';
 import { IMonthSummary } from './interfaces/month-summary.interface';
 import { ReportFiltersDto } from './dto/report-filters.dto';
 import {
-  IBarChartReportResponse,
-  IDonutChartReportResponse,
+    IBarChartReportResponse,
+    IDonutChartReportResponse,
 } from './interfaces/reports-responses.interface';
 import { ExpenseCategory } from 'src/expenses/enums/expense-category.enum';
-import { getMonthAndYear } from '../common/utils/dates.utils';
+import { formatDate, getMonthsInBetween } from '../common/utils/dates.utils';
 
 @Injectable()
 export class AnalyticsService {
-  constructor(
-    private readonly incomeService: IncomeService,
-    private readonly expensesService: ExpensesService,
-    private readonly creditCardService: CreditCardsService,
-  ) {}
+    constructor(
+        private readonly incomeService: IncomeService,
+        private readonly expensesService: ExpensesService,
+        private readonly creditCardService: CreditCardsService,
+    ) {}
 
-  private static generateMonthsRange(
-    fromDate: string,
-    toDate?: string,
-  ): string[] {
-    const monthsRange: string[] = [];
-    const [month, year] = getMonthAndYear(fromDate);
+    public async getMonthSummary(
+        date: string,
+        userId: number,
+    ): Promise<IMonthSummary> {
+        let monthPaidExpensesTotal = 0;
+        let monthExpensesTotal = 0;
 
-    if (!isEmpty(toDate)) {
-      const [toMonth, toYear] = getMonthAndYear(toDate);
+        const monthExpenses = await this.expensesService.findByFilters({
+            month: date,
+            userId,
+        });
+        if (
+            !isNull(monthExpenses) &&
+            !isUndefined(monthExpenses) &&
+            !isEmpty(monthExpenses)
+        ) {
+            monthExpenses.forEach((expense) => {
+                if (expense.status === ExpenseStatus.PAID) {
+                    monthPaidExpensesTotal += Number(expense.price);
+                }
 
-      for (
-        const date = new Date(year, month - 1);
-        date <= new Date(toYear, toMonth - 1);
-        date.setMonth(date.getMonth() + 1)
-      ) {
-        const [newYear, newMonth] = new Date(date)
-          .toISOString()
-          .split('T')[0]
-          .split('-');
-        monthsRange.push(`${newMonth}-${newYear}`);
-      }
-    }
-
-    if (monthsRange.length === 0) {
-      monthsRange.push(fromDate);
-    }
-
-    return monthsRange;
-  }
-
-  public async getMonthSummary(
-    month: string,
-    userId: number,
-  ): Promise<IMonthSummary> {
-    let monthPaidExpensesTotal = 0;
-    let monthExpensesTotal = 0;
-
-    const monthExpenses = await this.expensesService.findByFilters({
-      month: month,
-      userId,
-    });
-    if (
-      !isNull(monthExpenses) &&
-      !isUndefined(monthExpenses) &&
-      !isEmpty(monthExpenses)
-    ) {
-      monthExpenses.forEach((expense) => {
-        if (expense.status === ExpenseStatus.PAID) {
-          monthPaidExpensesTotal += Number(expense.price);
+                monthExpensesTotal += Number(expense.price);
+            });
         }
 
-        monthExpensesTotal += Number(expense.price);
-      });
+        const usersMonthTotalIncome =
+            await this.incomeService.getUsersMonthTotalIncome(userId, date);
+
+        return {
+            budget: usersMonthTotalIncome,
+            expensesTotal: monthExpensesTotal,
+            paidTotal: monthPaidExpensesTotal,
+            monthBalance: usersMonthTotalIncome - monthExpensesTotal,
+        };
     }
 
-    const usersMonthTotalIncome =
-      await this.incomeService.getUsersMonthTotalIncome(userId, month);
+    public async getExpensesXCategoryReport(
+        filters: ReportFiltersDto,
+        userId: number,
+    ): Promise<IDonutChartReportResponse | null> {
+        const expenses = await this.expensesService.findByFilters({
+            fromDate: filters.fromDate,
+            toDate: filters.toDate,
+            userId: userId,
+        });
 
-    return {
-      budget: usersMonthTotalIncome,
-      expensesTotal: monthExpensesTotal,
-      paidTotal: monthPaidExpensesTotal,
-      monthBalance: usersMonthTotalIncome - monthExpensesTotal,
-    };
-  }
+        if (
+            isNull(expenses) ||
+            isUndefined(expenses) ||
+            expenses.length === 0
+        ) {
+            return null;
+        }
 
-  public async getExpensesXCategoryReport(
-    filters: ReportFiltersDto,
-    userId: number,
-  ): Promise<IDonutChartReportResponse | null> {
-    const expenses = await this.expensesService.findByFilters({
-      fromDate: filters.fromDate,
-      toDate: filters.toDate,
-      userId: userId,
-    });
+        const mappedExpensesByCategory = new Map<ExpenseCategory, number>();
+        for (const expense of expenses) {
+            const categoryExpenseTotal = mappedExpensesByCategory.get(
+                expense.category,
+            );
 
-    if (isNull(expenses) || isUndefined(expenses) || expenses.length === 0) {
-      return null;
+            if (isUndefined(categoryExpenseTotal)) {
+                mappedExpensesByCategory.set(
+                    expense.category,
+                    Number(expense.price),
+                );
+                continue;
+            }
+
+            mappedExpensesByCategory.set(
+                expense.category,
+                categoryExpenseTotal + Number(expense.price),
+            );
+        }
+
+        return {
+            series: Array.from(mappedExpensesByCategory.values()).map(
+                (categoryTotal) => categoryTotal,
+            ),
+            labels: Array.from(mappedExpensesByCategory.keys()).map(
+                (category) => category,
+            ),
+        };
     }
 
-    const mappedExpensesByCategory = new Map<ExpenseCategory, number>();
-    for (const expense of expenses) {
-      const categoryExpenseTotal = mappedExpensesByCategory.get(
-        expense.category,
-      );
-
-      if (isUndefined(categoryExpenseTotal)) {
-        mappedExpensesByCategory.set(expense.category, Number(expense.price));
-        continue;
-      }
-
-      mappedExpensesByCategory.set(
-        expense.category,
-        categoryExpenseTotal + Number(expense.price),
-      );
-    }
-
-    return {
-      series: Array.from(mappedExpensesByCategory.values()).map(
-        (categoryTotal) => categoryTotal,
-      ),
-      labels: Array.from(mappedExpensesByCategory.keys()).map(
-        (category) => category,
-      ),
-    };
-  }
-
-  public async getExpensesXBalanceReport(
-    filters: ReportFiltersDto,
-    userId: number,
-  ): Promise<IBarChartReportResponse | null> {
-    const monthsRange = AnalyticsService.generateMonthsRange(
-      filters.fromDate,
-      filters.toDate,
-    );
-
-    const mappedMonthsSummaries = new Map<string, IMonthSummary>();
-    for (const monthRange of monthsRange) {
-      const summary = await this.getMonthSummary(monthRange, userId);
-
-      mappedMonthsSummaries.set(monthRange, summary);
-    }
-
-    const expensesSeriesArray = Array.from(mappedMonthsSummaries.values()).map(
-      (summary) => summary.expensesTotal,
-    );
-    const balanceSeriesArray = Array.from(mappedMonthsSummaries.values()).map(
-      (summary) => summary.monthBalance,
-    );
-
-    return {
-      categories: Array.from(mappedMonthsSummaries.keys()),
-      series: [
-        { name: 'Gastos', data: expensesSeriesArray },
-        { name: 'Saldo do Mês', data: balanceSeriesArray },
-      ],
-    };
-  }
-
-  public async getExpensesXCreditCardsReport(
-    filters: ReportFiltersDto,
-    userId: number,
-  ): Promise<IBarChartReportResponse> {
-    const monthsRange = AnalyticsService.generateMonthsRange(
-      filters.fromDate,
-      filters.toDate,
-    );
-
-    const mappedMonthCreditCardTotal = new Map<string, number>();
-    for (const month of monthsRange) {
-      const { invoicesTotal } =
-        await this.creditCardService.getUsersMonthCreditCardTotal(
-          userId,
-          month,
+    public async getExpensesXBalanceReport(
+        filters: ReportFiltersDto,
+        userId: number,
+    ): Promise<IBarChartReportResponse | null> {
+        const monthsRange = getMonthsInBetween(
+            filters.fromDate,
+            filters.toDate,
         );
-      mappedMonthCreditCardTotal.set(month, invoicesTotal);
+
+        const mappedMonthsSummaries = new Map<string, IMonthSummary>();
+        for (const month of monthsRange) {
+            const formattedMonth = formatDate(month, 'YYYY-MM');
+            const summary = await this.getMonthSummary(formattedMonth, userId);
+
+            mappedMonthsSummaries.set(formattedMonth, summary);
+        }
+
+        const expensesSeriesArray = Array.from(
+            mappedMonthsSummaries.values(),
+        ).map((summary) => summary.expensesTotal);
+        const balanceSeriesArray = Array.from(
+            mappedMonthsSummaries.values(),
+        ).map((summary) => summary.monthBalance);
+
+        return {
+            categories: Array.from(mappedMonthsSummaries.keys()),
+            series: [
+                { name: 'Gastos', data: expensesSeriesArray },
+                { name: 'Saldo do Mês', data: balanceSeriesArray },
+            ],
+        };
     }
 
-    return {
-      categories: Array.from(mappedMonthCreditCardTotal.keys()),
-      series: [{ data: Array.from(mappedMonthCreditCardTotal.values()) }],
-    };
-  }
+    public async getExpensesXCreditCardsReport(
+        filters: ReportFiltersDto,
+        userId: number,
+    ): Promise<IBarChartReportResponse> {
+        const monthsRange = getMonthsInBetween(
+            filters.fromDate,
+            filters.toDate,
+        );
 
-  public async getInvestimentsXMonthReport(
-    filters: ReportFiltersDto,
-    userId: number,
-  ): Promise<IBarChartReportResponse> {
-    const monthsRange = AnalyticsService.generateMonthsRange(
-      filters.fromDate,
-      filters.toDate,
-    );
+        const mappedMonthCreditCardTotal = new Map<string, number>();
+        for (const month of monthsRange) {
+            const formattedMonth = formatDate(month, 'YYYY-MM');
+            const { invoicesTotal } =
+                await this.creditCardService.getUsersMonthCreditCardTotal(
+                    userId,
+                    formattedMonth,
+                );
+            mappedMonthCreditCardTotal.set(formattedMonth, invoicesTotal);
+        }
 
-    const mappedMonthInvestiment = new Map<string, number>();
-    for (const month of monthsRange) {
-      const investiments = await this.expensesService.findByFilters({
-        month: month,
-        userId: userId,
-        category: ExpenseCategory.INVESTIMENT,
-      });
+        return {
+            categories: Array.from(mappedMonthCreditCardTotal.keys()),
+            series: [{ data: Array.from(mappedMonthCreditCardTotal.values()) }],
+        };
+    }
 
-      const investimentTotal =
-        investiments.length === 0
-          ? 0
-          : investiments.reduce((total, investiment) => {
-              return total + Number(investiment.price);
+    public async getInvestmentsXMonthReport(
+        filters: ReportFiltersDto,
+        userId: number,
+    ): Promise<IBarChartReportResponse> {
+        const monthsRange = getMonthsInBetween(
+            filters.fromDate,
+            filters.toDate,
+        );
+
+        const mappedMonthInvestment = new Map<string, number>();
+        for (const month of monthsRange) {
+            const investments = await this.expensesService.findByFilters({
+                month: formatDate(month, 'YYYY-MM'),
+                userId: userId,
+                category: ExpenseCategory.INVESTMENT,
+            });
+
+            const totalInvestment = investments.reduce((total, investment) => {
+                return total + Number(investment.price);
             }, 0);
 
-      mappedMonthInvestiment.set(month, investimentTotal);
-    }
+            mappedMonthInvestment.set(
+                formatDate(month, 'YYYY-MM'),
+                totalInvestment,
+            );
+        }
 
-    return {
-      categories: Array.from(mappedMonthInvestiment.keys()),
-      series: [{ data: Array.from(mappedMonthInvestiment.values()) }],
-    };
-  }
+        return {
+            categories: Array.from(mappedMonthInvestment.keys()),
+            series: [{ data: Array.from(mappedMonthInvestment.values()) }],
+        };
+    }
 }

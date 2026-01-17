@@ -153,7 +153,10 @@ export class CommonService {
         const userTimezone = this.requestContext.getTimezone();
 
         return transactions.map((transaction) => ({
-            ...transaction,
+            title: transaction.title,
+            price: transaction.price,
+            entityId: transaction.entityId,
+            type: transaction.type,
             start: formatInTimezone(transaction.start, userTimezone),
             end: formatInTimezone(transaction.end, userTimezone),
         }));

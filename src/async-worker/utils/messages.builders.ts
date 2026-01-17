@@ -6,10 +6,12 @@ export const buildTransactionMessage = ({
     userId,
     bankAccountId,
     originalPrice,
+    invoiceId,
 }: {
     transaction: ITransaction;
     userId: number;
     bankAccountId?: number;
+    invoiceId?: number;
     originalPrice?: number;
 }): ITransactionMessage => {
     const timestamp =
@@ -26,5 +28,6 @@ export const buildTransactionMessage = ({
         originalPrice,
         description: transaction.title,
         bankAccountId,
+        invoiceId,
     };
 };

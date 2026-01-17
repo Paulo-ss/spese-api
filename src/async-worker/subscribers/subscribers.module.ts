@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { ExpenseCreatedSubscriber } from './implementations/expense/expense-created.subscriber';
 import { DEPENDENCY_INJECTION_PROVIDERS } from 'src/common/constants/constants';
 import { ISubscriber } from '../interfaces/subscriber.interface';
@@ -10,6 +10,9 @@ import { IncomeCreatedSubscriber } from './implementations/incomes/income-create
 import { IncomeUpdatedSubscriber } from './implementations/incomes/income-updated.subscriber';
 import { IncomeDeletedSubscriber } from './implementations/incomes/income-deleted.subscriber';
 import { BankAccountsModule } from '../../bank-accounts/bank-accounts.module';
+import { CreditCardsModule } from '../../credit-cards/credit-cards.module';
+import { AnalyticsModule } from '../../analytics/analytics.module';
+import { ReportProcessingSubscriber } from './implementations/reports/report-processing.subscriber';
 
 const ALL_SUBSCRIBERS = [
     ExpenseCreatedSubscriber,
@@ -18,10 +21,16 @@ const ALL_SUBSCRIBERS = [
     IncomeCreatedSubscriber,
     IncomeUpdatedSubscriber,
     IncomeDeletedSubscriber,
+    ReportProcessingSubscriber,
 ];
 
 @Module({
-    imports: [CashFlowModule, BankAccountsModule],
+    imports: [
+        CashFlowModule,
+        forwardRef(() => BankAccountsModule),
+        CreditCardsModule,
+        forwardRef(() => AnalyticsModule),
+    ],
     providers: [
         ...ALL_SUBSCRIBERS,
         {

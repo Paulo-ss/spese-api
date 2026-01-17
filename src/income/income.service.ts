@@ -11,8 +11,9 @@ import { isEmpty } from 'class-validator';
 import { FilterIncomesDto } from './dto/filter-incomes.dto';
 import { BankAccountsService } from 'src/bank-accounts/bank-accounts.service';
 import {
-    getMonthAndDayAndYear,
-    getMonthAndYear,
+    getFirstDayOfMonth,
+    getLastDayOfMonth,
+    getYearAndMonthAndDay,
 } from '../common/utils/dates.utils';
 import { RedisPublisher } from '../async-worker/publisher/redis.publisher';
 import { ITransactionMessage } from '../async-worker/types/messages';
@@ -51,8 +52,8 @@ export class IncomeService {
     public async findByFilters(
         filters: FilterIncomesDto,
     ): Promise<IncomeEntity[]> {
-        const [month, day, year] = getMonthAndYear(filters.fromDate);
-        const [toMonth, toDay, toYear] = getMonthAndYear(filters.toDate);
+        const [year, month, day] = getYearAndMonthAndDay(filters.fromDate);
+        const [toYear, toMonth, toDay] = getYearAndMonthAndDay(filters.toDate);
 
         const query = this.incomesRepository
             .createQueryBuilder('in')
@@ -74,13 +75,8 @@ export class IncomeService {
         userId: number,
         incomeDate: string,
     ): Promise<number> {
-        const [month, year] = getMonthAndYear(incomeDate);
-        const firstDayOfTheMonth = new Date(year, month - 1)
-            .toISOString()
-            .split('T')[0];
-        const lastDayOfTheMonth = new Date(year, month, 0)
-            .toISOString()
-            .split('T')[0];
+        const firstDayOfTheMonth = getFirstDayOfMonth(incomeDate);
+        const lastDayOfTheMonth = getLastDayOfMonth(incomeDate);
 
         const incomes = await this.incomesRepository
             .createQueryBuilder('in')
@@ -104,7 +100,7 @@ export class IncomeService {
         createIncome: CreateIncomeDto,
         userId: number,
     ): Promise<IncomeEntity> {
-        const [month, day, year] = getMonthAndDayAndYear(
+        const [year, month, day] = getYearAndMonthAndDay(
             createIncome.incomeMonth,
         );
 

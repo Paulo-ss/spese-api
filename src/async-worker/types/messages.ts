@@ -12,4 +12,10 @@ export interface ITransactionMessage extends IBaseMessage {
     price: number;
     originalPrice?: number;
     bankAccountId?: number;
+    invoiceId?: number;
+}
+
+export interface IReportRequestedMessage extends IBaseMessage {
+    reportId?: number;
+    month: string;
 }

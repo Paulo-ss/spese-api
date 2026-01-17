@@ -20,8 +20,8 @@ import { RedisPublisher } from 'src/async-worker/publisher/redis.publisher';
 import { ASYNC_WORKER } from 'src/common/constants/constants';
 import { ITransactionMessage } from 'src/async-worker/types/messages';
 import {
-    getMonthAndDayAndYear,
-    getMonthAndYear,
+    getFirstDayOfMonth,
+    getLastDayOfMonth,
 } from '../common/utils/dates.utils';
 import { buildTransactionMessage } from '../async-worker/utils/messages.builders';
 import { CreditCardEntity } from '../credit-cards/entities/credit-card.entity';
@@ -73,9 +73,8 @@ export class ExpensesService {
             .leftJoin('e.creditCard', 'cc');
 
         if (filters.month) {
-            const [fromMonth, fromYear] = getMonthAndYear(filters.month);
-            const firstDayOfTheMonth = new Date(fromYear, fromMonth - 1);
-            const lastDayOfTheMonth = new Date(fromYear, fromMonth, 0);
+            const firstDayOfTheMonth = getFirstDayOfMonth(filters.month);
+            const lastDayOfTheMonth = getLastDayOfMonth(filters.month);
 
             query.where(
                 'e.expense_date between :firstDayOfTheMonth and :lastDayOfTheMonth',
@@ -87,16 +86,9 @@ export class ExpensesService {
         }
 
         if (filters.fromDate && filters.toDate) {
-            const [fromMonth, fromDay, fromYear] = getMonthAndDayAndYear(
-                filters.fromDate,
-            );
-            const [toMonth, toDay, toYear] = getMonthAndDayAndYear(
-                filters.toDate,
-            );
-
             query.where('e.expense_date between :fromDate and :toDate', {
-                fromDate: new Date(fromYear, fromMonth - 1, fromDay),
-                toDate: new Date(toYear, toMonth - 1, toDay),
+                fromDate: filters.fromDate,
+                toDate: filters.toDate,
             });
         }
 
@@ -221,6 +213,7 @@ export class ExpensesService {
                     transaction: expense,
                     userId: expense.userId,
                     bankAccountId: expense.bankAccount?.id,
+                    invoiceId: expense.invoice?.id,
                 }),
             ),
         });
@@ -306,6 +299,7 @@ export class ExpensesService {
                 transaction: expense,
                 userId: expense.userId,
                 bankAccountId: expense.bankAccount?.id,
+                invoiceId: expense.invoice?.id,
             }),
         });
 
@@ -348,6 +342,7 @@ export class ExpensesService {
                 userId: expense.userId,
                 bankAccountId: expense.bankAccount?.id,
                 originalPrice,
+                invoiceId: expense.invoice?.id,
             }),
         });
 
@@ -381,6 +376,7 @@ export class ExpensesService {
                 transaction: expense,
                 userId: expense.userId,
                 bankAccountId: expense.bankAccount?.id,
+                invoiceId: expense.invoice?.id,
             }),
         });
 

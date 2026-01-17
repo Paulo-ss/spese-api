@@ -6,6 +6,7 @@ export const ASYNC_WORKER = {
         INCOME_CREATED: 'income:created',
         INCOME_UPDATED: 'income:updated',
         INCOME_DELETED: 'income:deleted',
+        REPORT_PROCESSING: 'report:processing',
     },
     REDIS_GROUPS: {
         EXPENSE_CREATED: 'expense_created',
@@ -14,6 +15,7 @@ export const ASYNC_WORKER = {
         INCOME_CREATED: 'income_created',
         INCOME_UPDATED: 'income_updated',
         INCOME_DELETED: 'income_deleted',
+        REPORT_PROCESSING: 'report_processing',
     },
     REDIS_ENTRY_IDS: {
         NEW_ENTRY: '*',

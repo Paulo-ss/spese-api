@@ -12,7 +12,7 @@ import { AsyncWorkerModule } from '../async-worker/async-worker.module';
         TypeOrmModule.forFeature([IncomeEntity]),
         UsersModule,
         forwardRef(() => BankAccountsModule),
-        AsyncWorkerModule,
+        forwardRef(() => AsyncWorkerModule),
     ],
     controllers: [IncomeController],
     providers: [IncomeService],

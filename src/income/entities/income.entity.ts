@@ -47,7 +47,7 @@ export class IncomeEntity implements IIncome, ITransaction {
     }
 
     get type(): TransactionType {
-        return TransactionType.INVOICE;
+        return TransactionType.INCOME;
     }
 
     get price(): number {

@@ -3,20 +3,17 @@ import { CashFlowDayEntity } from './entities/cash-flow-daily.entity';
 import { FindOperator, FindOptionsOrder, LessThan, MoreThan } from 'typeorm';
 import {
     ICashFlowResponse,
-    ITransaction,
     TDailyCashFlow,
 } from './interfaces/cash-flow.interface';
 import { BankAccountsService } from 'src/bank-accounts/bank-accounts.service';
 import { CommonService } from 'src/common/common.service';
 import { TransactionType } from 'src/cash-flow/interfaces/transaction-type';
-import { getNegativeNumber } from 'src/common/utils/numbers.utils';
 import { OperationType } from '../common/interfaces/operation-type';
 import { ExpensesService } from 'src/expenses/expenses.service';
 import {
     formatInTimezone,
     getFirstDayOfMonth,
     getLastDayOfMonth,
-    getMonthAndYear,
     getMonthCalendarDates,
     isDateGreaterThanOrEqualTo,
 } from 'src/common/utils/dates.utils';
@@ -24,6 +21,7 @@ import { IncomeService } from 'src/income/income.service';
 import { InvoiceService } from 'src/credit-cards/invoice.service';
 import { RequestContextService } from 'src/common/request-context.service';
 import { ITransactionMessage } from '../async-worker/types/messages';
+import * as dayjs from 'dayjs';
 
 @Injectable()
 export class CashFlowService {
@@ -84,11 +82,9 @@ export class CashFlowService {
         userId: number;
     }): Promise<ICashFlowResponse> {
         try {
-            const [month, year] = getMonthAndYear(monthYear);
-            const monthDate = new Date(year, month - 1);
-
-            const fromDate = `${month}-${getFirstDayOfMonth(monthDate).getDate()}-${year}`;
-            const toDate = `${month}-${getLastDayOfMonth(monthDate).getDate()}-${year}`;
+            const monthDate = dayjs(monthYear).toDate();
+            const fromDate = getFirstDayOfMonth(monthDate);
+            const toDate = getLastDayOfMonth(monthDate);
 
             const incomes = this.commonService.mapToTransaction({
                 transactions: await this.incomeService.findByFilters({
@@ -106,7 +102,7 @@ export class CashFlowService {
             });
             const invoices = this.commonService.mapToTransaction({
                 transactions: await this.invoiceService.findByMonth(
-                    monthYear,
+                    fromDate,
                     userId,
                 ),
             });
@@ -135,9 +131,8 @@ export class CashFlowService {
                 const userTimezoneDate = formatInTimezone(date, userTimezone);
                 const isDateGreaterThanOrEqualToToday =
                     isDateGreaterThanOrEqualTo({
-                        date,
-                        otherDate: new Date(),
-                        timezone: userTimezone,
+                        date: dayjs(date),
+                        otherDate: dayjs(),
                     });
 
                 const openingBalance = isDateGreaterThanOrEqualToToday
