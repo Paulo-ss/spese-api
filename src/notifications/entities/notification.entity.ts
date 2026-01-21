@@ -1,39 +1,28 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import { INotification } from '../interfaces/notification.interface';
 import { NotificationType } from '../enums/notification-type.enum';
+import { VersionedUserEntityBase } from '../../common/entities/versioned-user-base.entity';
 
 @Entity({ name: 'notifications' })
-export class NotificationEntity implements INotification {
-  @PrimaryGeneratedColumn()
-  public id: number;
+export class Notification
+    extends VersionedUserEntityBase
+    implements INotification
+{
+    @PrimaryGeneratedColumn()
+    public id: number;
 
-  @Column({ name: 'title' })
-  public title: string;
+    @Column({ name: 'title' })
+    public title: string;
 
-  @Column({ name: 'content' })
-  public content: string;
+    @Column({ name: 'content' })
+    public content: string;
 
-  @Column({ name: 'reference_id' })
-  public referenceId: number;
+    @Column({ name: 'reference_id' })
+    public referenceId: number;
 
-  @Column('enum', { name: 'type', enum: NotificationType })
-  public type: NotificationType;
+    @Column('enum', { name: 'type', enum: NotificationType })
+    public type: NotificationType;
 
-  @Column({ name: 'is_read' })
-  public isRead: boolean;
-
-  @Column({ name: 'user_id' })
-  public userId: number;
-
-  @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
-  public createdAt: Date;
-
-  @UpdateDateColumn({ type: 'timestamp', name: 'updated_at' })
-  public updatedAt: Date;
+    @Column({ name: 'is_read' })
+    public isRead: boolean;
 }

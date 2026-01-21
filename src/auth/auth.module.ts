@@ -6,12 +6,12 @@ import { JwtModule } from 'src/jwt/jwt.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ExternalOauthModule } from '../external-oauth/external-oauth.module';
-import { BlacklistedTokenEntity } from './entities/blacklisted-token.entity';
+import { BlacklistedToken } from './entities/blacklisted-token.entity';
 import { MailerModule } from 'src/mailer/mailer.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([BlacklistedTokenEntity]),
+    TypeOrmModule.forFeature([BlacklistedToken]),
     ClientsModule.register([
       {
         name: 'COMMUNICATION',

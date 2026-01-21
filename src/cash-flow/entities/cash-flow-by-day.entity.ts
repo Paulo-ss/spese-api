@@ -1,15 +1,13 @@
-import {
-    Column,
-    CreateDateColumn,
-    Entity,
-    PrimaryGeneratedColumn,
-    UpdateDateColumn,
-} from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import { ICashFlowDaily } from '../interfaces/cash-flow.interface';
 import { NumericColumnTransformer } from 'src/common/transformers/column-numeric-transformer.transformer';
+import { VersionedUserEntityBase } from '../../common/entities/versioned-user-base.entity';
 
-@Entity('cash_flow_days')
-export class CashFlowDayEntity implements ICashFlowDaily {
+@Entity('cash_flow_by_day')
+export class CashFlowByDay
+    extends VersionedUserEntityBase
+    implements ICashFlowDaily
+{
     @PrimaryGeneratedColumn()
     public id: number;
 
@@ -31,15 +29,6 @@ export class CashFlowDayEntity implements ICashFlowDaily {
     })
     public closingBalance: number;
 
-    @Column('timestamp', { name: 'date' })
+    @Column('date', { name: 'date' })
     public date: Date;
-
-    @Column({ name: 'user_id', transformer: new NumericColumnTransformer() })
-    public userId: number;
-
-    @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
-    public createdAt: Date;
-
-    @UpdateDateColumn({ type: 'timestamp', name: 'updated_at' })
-    public updatedAt: Date;
 }

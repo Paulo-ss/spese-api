@@ -1,16 +1,10 @@
-import {
-    Column,
-    CreateDateColumn,
-    Entity,
-    PrimaryGeneratedColumn,
-    UpdateDateColumn,
-} from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import { IReport } from '../interfaces/report.interface';
 import { ReportStatus } from '../enums/report-status.enum';
-import { NumericColumnTransformer } from '../../common/transformers/column-numeric-transformer.transformer';
+import { VersionedUserEntityBase } from '../../common/entities/versioned-user-base.entity';
 
 @Entity({ name: 'reports' })
-export class ReportEntity implements IReport {
+export class Report extends VersionedUserEntityBase implements IReport {
     @PrimaryGeneratedColumn()
     public id: number;
 
@@ -20,15 +14,6 @@ export class ReportEntity implements IReport {
     @Column({ name: 'filename', nullable: true })
     public filename: string;
 
-    @Column({ name: 'user_id', transformer: new NumericColumnTransformer() })
-    public userId: number;
-
     @Column('enum', { name: 'status', enum: ReportStatus })
     public status: ReportStatus;
-
-    @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
-    public createdAt: Date;
-
-    @UpdateDateColumn({ type: 'timestamp', name: 'updated_at' })
-    public updatedAt: Date;
 }

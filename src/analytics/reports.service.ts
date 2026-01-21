@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ReportEntity } from './entities/report.entity';
+import { Report } from './entities/report.entity';
 import { Repository } from 'typeorm';
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
 import { CommonService } from 'src/common/common.service';
@@ -23,8 +23,8 @@ export class ReportsService {
     private readonly emitter: EventEmitter;
 
     constructor(
-        @InjectRepository(ReportEntity)
-        private readonly reportRepository: Repository<ReportEntity>,
+        @InjectRepository(Report)
+        private readonly reportRepository: Repository<Report>,
         private readonly commonService: CommonService,
         private readonly analyticsService: AnalyticsService,
         private readonly notificationsDBService: NotificationsDBService,
@@ -41,11 +41,11 @@ export class ReportsService {
         this.emitter.emit(channel, status);
     }
 
-    public async getReportById(reportId: number): Promise<ReportEntity> {
+    public async getReportById(reportId: number): Promise<Report> {
         return await this.reportRepository.findOneBy({ id: reportId });
     }
 
-    public async getUsersReports(userId: number): Promise<ReportEntity[]> {
+    public async getUsersReports(userId: number): Promise<Report[]> {
         return await this.reportRepository.find({
             where: { userId },
             order: { createdAt: 'DESC' },

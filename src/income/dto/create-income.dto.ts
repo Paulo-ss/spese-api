@@ -14,7 +14,7 @@ export class CreateIncomeDto {
     @Matches(DATE_YYYY_MM_DD_REGEX, {
         message: 'A data deve estar no padrão YYYY-MM-DD',
     })
-    public incomeMonth: string;
+    public incomeDate: string;
 
     @IsOptional()
     @IsNumber()

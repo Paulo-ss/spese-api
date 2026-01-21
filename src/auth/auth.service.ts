@@ -25,15 +25,15 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { isNull, isUndefined } from 'src/common/utils/validation.utils';
 import { ExternalSignInDto } from './dto/external-sign-in.dto';
 import { ExternalOauthService } from '../external-oauth/services/external-oauth.abstract.service';
-import { BlacklistedTokenEntity } from './entities/blacklisted-token.entity';
+import { BlacklistedToken } from './entities/blacklisted-token.entity';
 import { MailerService } from 'src/mailer/mailer.service';
 import { DEPENDENCY_INJECTION_PROVIDERS } from 'src/common/constants/constants';
 
 @Injectable()
 export class AuthService {
     constructor(
-        @InjectRepository(BlacklistedTokenEntity)
-        private readonly blacklistedTokenRepository: Repository<BlacklistedTokenEntity>,
+        @InjectRepository(BlacklistedToken)
+        private readonly blacklistedTokenRepository: Repository<BlacklistedToken>,
         private readonly usersService: UsersService,
         private readonly commonService: CommonService,
         private readonly jwtService: JwtService,

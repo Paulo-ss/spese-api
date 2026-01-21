@@ -1,4 +1,6 @@
-export interface IUser {
+import { IVersionedEntityBase } from '../../common/interfaces/versioned-entity-base.interface';
+
+export interface IUser extends IVersionedEntityBase {
     id: number;
     name: string;
     username: string;
@@ -6,6 +8,4 @@ export interface IUser {
     password: string;
     confirmed: boolean;
     accountSetup: boolean;
-    createdAt: string;
-    updatedAt: string;
 }

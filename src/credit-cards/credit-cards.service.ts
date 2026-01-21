@@ -1,6 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { CreditCardEntity } from './entities/credit-card.entity';
+import { CreditCard } from './entities/credit-card.entity';
 import { Repository } from 'typeorm';
 import { CommonService } from 'src/common/common.service';
 import { CreateCreditCardDto } from './dto/create-credit-card.dto';
@@ -20,8 +20,8 @@ import dayjs from 'dayjs';
 @Injectable()
 export class CreditCardsService {
     constructor(
-        @InjectRepository(CreditCardEntity)
-        private readonly creditCardRepository: Repository<CreditCardEntity>,
+        @InjectRepository(CreditCard)
+        private readonly creditCardRepository: Repository<CreditCard>,
         private readonly commonService: CommonService,
         private readonly bankAccountService: BankAccountsService,
     ) {}
@@ -29,7 +29,7 @@ export class CreditCardsService {
     public async findById(
         creditCardId: number,
         userId: number,
-    ): Promise<CreditCardEntity> {
+    ): Promise<CreditCard> {
         const creditCard = await this.creditCardRepository.findOne({
             where: { id: creditCardId },
             relations: {
@@ -103,7 +103,7 @@ export class CreditCardsService {
         return { paidInvoicesTotal, invoicesTotal };
     }
 
-    public async findByUserId(userId: number): Promise<CreditCardEntity[]> {
+    public async findByUserId(userId: number): Promise<CreditCard[]> {
         return await this.creditCardRepository
             .createQueryBuilder('cc')
             .leftJoinAndSelect('cc.invoices', 'invoice')
@@ -115,7 +115,7 @@ export class CreditCardsService {
     public async create(
         creditCard: CreateCreditCardDto,
         userId: number,
-    ): Promise<CreditCardEntity> {
+    ): Promise<CreditCard> {
         const newCreditCard = this.creditCardRepository.create({
             ...creditCard,
             bankAccount: creditCard.bankAccountId
@@ -140,7 +140,7 @@ export class CreditCardsService {
         creditCards: CreateCreditCardDto[],
         userId: number,
     ): Promise<IGenericMessageResponse> {
-        const newCreditCards: CreditCardEntity[] = [];
+        const newCreditCards: CreditCard[] = [];
 
         for (const cc of creditCards) {
             newCreditCards.push(
@@ -172,7 +172,7 @@ export class CreditCardsService {
         updateCreditCardDto: UpdateCreditCardDto,
         creditCardId: number,
         userId: number,
-    ): Promise<CreditCardEntity> {
+    ): Promise<CreditCard> {
         const creditCard = await this.findById(creditCardId, userId);
 
         Object.keys(updateCreditCardDto).forEach((key) => {

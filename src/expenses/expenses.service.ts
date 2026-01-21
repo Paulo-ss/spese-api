@@ -1,6 +1,6 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ExpenseEntity } from './entities/expense.entity';
+import { Expense } from './entities/expense.entity';
 import { FindOptionsRelations, Repository } from 'typeorm';
 import { CommonService } from 'src/common/common.service';
 import { FindExpensesFiltersDto } from './dto/find-expenses-filters.dto';
@@ -8,8 +8,8 @@ import { CreateExpenseDto } from './dto/create-expense.dto';
 import { InvoiceService } from 'src/credit-cards/invoice.service';
 import { BankAccountsService } from 'src/bank-accounts/bank-accounts.service';
 import { CreditCardsService } from 'src/credit-cards/credit-cards.service';
-import { BankAccountEntity } from 'src/bank-accounts/entities/bank.entity';
-import { InvoiceEntity } from 'src/credit-cards/entities/invoice.entity';
+import { BankAccount } from 'src/bank-accounts/entities/bank.entity';
+import { Invoice } from 'src/credit-cards/entities/invoice.entity';
 import { InvoiceStatus } from 'src/credit-cards/enums/invoice-status.enum';
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
 import { ExpenseStatus } from './enums/expense-status.enum';
@@ -25,14 +25,14 @@ import {
     formatDate,
 } from '../common/utils/dates.utils';
 import { buildTransactionMessage } from '../async-worker/utils/messages.builders';
-import { CreditCardEntity } from '../credit-cards/entities/credit-card.entity';
-import { CategoryEntity } from '../category/entities/category.entity';
+import { CreditCard } from '../credit-cards/entities/credit-card.entity';
+import { Category } from '../category/entities/category.entity';
 
 @Injectable()
 export class ExpensesService {
     constructor(
-        @InjectRepository(ExpenseEntity)
-        private readonly expensesRepository: Repository<ExpenseEntity>,
+        @InjectRepository(Expense)
+        private readonly expensesRepository: Repository<Expense>,
         @Inject(forwardRef(() => InvoiceService))
         private readonly invoiceService: InvoiceService,
         private readonly bankAccountService: BankAccountsService,
@@ -46,11 +46,11 @@ export class ExpensesService {
     public async findById(
         expenseId: number,
         userId: number,
-        relations: FindOptionsRelations<ExpenseEntity> = {
+        relations: FindOptionsRelations<Expense> = {
             invoice: { creditCard: false, expenses: false },
             customCategory: { expenses: false },
         },
-    ): Promise<ExpenseEntity> {
+    ): Promise<Expense> {
         const expense = await this.expensesRepository.findOne({
             where: {
                 id: expenseId,
@@ -66,7 +66,7 @@ export class ExpensesService {
     public async findByFilters(
         filters: FindExpensesFiltersDto,
         ignoreCreditCard = false,
-    ): Promise<ExpenseEntity[]> {
+    ): Promise<Expense[]> {
         const query = this.expensesRepository
             .createQueryBuilder('e')
             .leftJoinAndSelect('e.bankAccount', 'ba')
@@ -163,10 +163,10 @@ export class ExpensesService {
     }: {
         createExpenseDto: CreateExpenseDto;
         userId: number;
-        creditCard: CreditCardEntity;
-        invoices: InvoiceEntity[];
-        bankAccount: BankAccountEntity | null;
-        customCategory: CategoryEntity | null;
+        creditCard: CreditCard;
+        invoices: Invoice[];
+        bankAccount: BankAccount | null;
+        customCategory: Category | null;
     }): Promise<void> {
         const {
             expenseType,
@@ -178,7 +178,7 @@ export class ExpensesService {
             expenseDate,
         } = createExpenseDto;
 
-        const installmentExpenses: ExpenseEntity[] = [];
+        const installmentExpenses: Expense[] = [];
 
         for (let i = 1; i <= installments; i++) {
             const nextMonthExpenseDate = new Date(expenseDate);
@@ -229,7 +229,7 @@ export class ExpensesService {
     public async create(
         createExpenseDto: CreateExpenseDto,
         userId: number,
-    ): Promise<ExpenseEntity | IGenericMessageResponse> {
+    ): Promise<Expense | IGenericMessageResponse> {
         const {
             expenseType,
             name,
@@ -247,7 +247,7 @@ export class ExpensesService {
             ? await this.creditCardService.findById(creditCardId, userId)
             : null;
 
-        let bankAccount: BankAccountEntity | null = null;
+        let bankAccount: BankAccount | null = null;
         if (bankAccountId || (creditCard && creditCard.bankAccount)) {
             bankAccount = await this.bankAccountService.findById(
                 bankAccountId ?? creditCard.bankAccount.id,
@@ -261,7 +261,7 @@ export class ExpensesService {
             false,
         );
 
-        const invoices: InvoiceEntity[] = creditCard
+        const invoices: Invoice[] = creditCard
             ? await this.invoiceService.createInvoicesForExpense({
                   creditCard,
                   expenseDate,
@@ -317,7 +317,7 @@ export class ExpensesService {
         expenseId: number,
         userId: number,
         updateDto: UpdateExpenseDto,
-    ): Promise<ExpenseEntity> {
+    ): Promise<Expense> {
         const expense = await this.findById(expenseId, userId);
         const originalPrice = expense.price;
 

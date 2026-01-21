@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { NotificationEntity } from './entities/notification.entity';
+import { Notification } from './entities/notification.entity';
 import { Repository } from 'typeorm';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
@@ -13,20 +13,20 @@ import { ReportJobDto } from 'src/analytics/dto/report-job.dto';
 @Injectable()
 export class NotificationsDBService {
   constructor(
-    @InjectRepository(NotificationEntity)
-    private readonly notificationReporsitory: Repository<NotificationEntity>,
+    @InjectRepository(Notification)
+    private readonly notificationReporsitory: Repository<Notification>,
     private readonly commonService: CommonService,
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  private async findById(id: number): Promise<NotificationEntity> {
+  private async findById(id: number): Promise<Notification> {
     const notification = await this.notificationReporsitory.findOneBy({ id });
     this.commonService.checkEntityExistence(notification, 'Notificação');
 
     return notification;
   }
 
-  public async findByUserId(userId: number): Promise<NotificationEntity[]> {
+  public async findByUserId(userId: number): Promise<Notification[]> {
     return await this.notificationReporsitory.find({
       where: { userId },
       order: {
@@ -47,7 +47,7 @@ export class NotificationsDBService {
 
   public async create(
     createNotifcationDto: CreateNotificationDto,
-  ): Promise<NotificationEntity> {
+  ): Promise<Notification> {
     const notification = this.notificationReporsitory.create({
       userId: createNotifcationDto.userId,
       type: createNotifcationDto.type,

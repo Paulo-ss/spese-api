@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { CashFlowDayEntity } from './entities/cash-flow-daily.entity';
+import { CashFlowByDay } from './entities/cash-flow-by-day.entity';
 import { FindOperator, FindOptionsOrder, LessThan, MoreThan } from 'typeorm';
 import {
     ICashFlowResponse,
@@ -38,10 +38,10 @@ export class CashFlowService {
     public async findAllCashFlowDayByDate(
         date: Date | FindOperator<Date>,
         userId: number,
-    ): Promise<CashFlowDayEntity[]> {
+    ): Promise<CashFlowByDay[]> {
         return await this.commonService.confirmTransaction(
             async (entityManager) => {
-                return await entityManager.find(CashFlowDayEntity, {
+                return await entityManager.find(CashFlowByDay, {
                     where: {
                         date,
                         userId,
@@ -58,11 +58,11 @@ export class CashFlowService {
     }: {
         date: Date | FindOperator<Date>;
         userId: number;
-        order?: FindOptionsOrder<CashFlowDayEntity>;
-    }): Promise<CashFlowDayEntity | null> {
+        order?: FindOptionsOrder<CashFlowByDay>;
+    }): Promise<CashFlowByDay | null> {
         return await this.commonService.confirmTransaction(
             async (entityManager) => {
-                return await entityManager.findOne(CashFlowDayEntity, {
+                return await entityManager.findOne(CashFlowByDay, {
                     where: {
                         date,
                         userId,
@@ -172,7 +172,7 @@ export class CashFlowService {
     public async createCashFlowDay(
         userId: number,
         date: Date,
-    ): Promise<CashFlowDayEntity> {
+    ): Promise<CashFlowByDay> {
         const previousCashFlow = await this.findCashFlowDayByDate({
             date: LessThan(date),
             userId,
@@ -197,14 +197,14 @@ export class CashFlowService {
 
         return await this.commonService.confirmTransaction(
             async (entityManager) => {
-                const newCashFlow = entityManager.create(CashFlowDayEntity, {
+                const newCashFlow = entityManager.create(CashFlowByDay, {
                     openingBalance: previousBalance,
                     closingBalance: nextBalance,
                     userId,
                     date,
                 });
 
-                return await entityManager.save(CashFlowDayEntity, newCashFlow);
+                return await entityManager.save(CashFlowByDay, newCashFlow);
             },
         );
     }
@@ -217,7 +217,7 @@ export class CashFlowService {
         date: Date;
         price: number;
         userId: number;
-    }): Promise<CashFlowDayEntity[]> {
+    }): Promise<CashFlowByDay[]> {
         const cashFlowDays = await this.findAllCashFlowDayByDate(
             MoreThan(date),
             userId,
@@ -241,7 +241,7 @@ export class CashFlowService {
         transactionType: TransactionType;
         price: number;
         originalPrice: number;
-        cashFlow: CashFlowDayEntity;
+        cashFlow: CashFlowByDay;
         operation: OperationType;
     }): Promise<void> {
         const currentClosingBalance = cashFlow.closingBalance;
@@ -262,7 +262,7 @@ export class CashFlowService {
             });
 
         await this.commonService.confirmTransaction(async (entityManager) => {
-            await entityManager.save(CashFlowDayEntity, [
+            await entityManager.save(CashFlowByDay, [
                 cashFlow,
                 ...updatedFutureCashFlowDays,
             ]);

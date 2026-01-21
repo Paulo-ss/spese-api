@@ -1,6 +1,6 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { InvoiceEntity } from './entities/invoice.entity';
+import { Invoice } from './entities/invoice.entity';
 import { Repository } from 'typeorm';
 import { CommonService } from 'src/common/common.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
@@ -17,21 +17,21 @@ import {
     getToday,
 } from 'src/common/utils/dates.utils';
 import { isNull } from '../common/utils/validation.utils';
-import { CreditCardEntity } from './entities/credit-card.entity';
+import { CreditCard } from './entities/credit-card.entity';
 import { ITransactionMessage } from '../async-worker/types/messages';
 import { OperationType } from '../common/interfaces/operation-type';
 
 @Injectable()
 export class InvoiceService {
     constructor(
-        @InjectRepository(InvoiceEntity)
-        private readonly invoiceRepository: Repository<InvoiceEntity>,
+        @InjectRepository(Invoice)
+        private readonly invoiceRepository: Repository<Invoice>,
         @Inject(forwardRef(() => ExpensesService))
         private readonly expenseService: ExpensesService,
         private readonly commonService: CommonService,
     ) {}
 
-    public async findById(id: number): Promise<InvoiceEntity> {
+    public async findById(id: number): Promise<Invoice> {
         const invoice = await this.invoiceRepository.findOne({
             where: { id },
             relations: {
@@ -61,7 +61,7 @@ export class InvoiceService {
     public async findByMonth(
         date: string,
         userId: number,
-    ): Promise<InvoiceEntity[]> {
+    ): Promise<Invoice[]> {
         const firstDayOfTheMonth = formatDate(
             getFirstDayOfMonth(date),
             'YYYY-MM-DD',
@@ -90,7 +90,7 @@ export class InvoiceService {
         creditCardId: number,
         creditCardClosingDay: number,
         invoiceDate: Date,
-    ): Promise<InvoiceEntity> {
+    ): Promise<Invoice> {
         const { month, year } = getInvoiceMonth(
             creditCardClosingDay,
             invoiceDate,
@@ -139,7 +139,7 @@ export class InvoiceService {
 
     public async create(
         createInvoiceDto: CreateInvoiceDto,
-    ): Promise<InvoiceEntity> {
+    ): Promise<Invoice> {
         const { invoiceDate, dateToComputeStatus, creditCard } =
             createInvoiceDto;
 
@@ -183,11 +183,11 @@ export class InvoiceService {
         installments,
         expenseDate,
     }: {
-        creditCard: CreditCardEntity;
+        creditCard: CreditCard;
         expenseDate: string;
         installments?: number;
-    }): Promise<InvoiceEntity[]> {
-        const invoices: InvoiceEntity[] = [];
+    }): Promise<Invoice[]> {
+        const invoices: Invoice[] = [];
 
         let invoice = await this.findByMonthAndCreditCard(
             creditCard.id,
@@ -360,7 +360,7 @@ export class InvoiceService {
             const { invoiceId, transactionType, originalPrice, price } =
                 transaction;
 
-            const invoice = await entityManager.findOne(InvoiceEntity, {
+            const invoice = await entityManager.findOne(Invoice, {
                 where: { id: invoiceId },
             });
 
@@ -378,7 +378,7 @@ export class InvoiceService {
                 invoice.currentPrice += transformedPrice;
                 invoice.totalPrice += transformedPrice;
 
-                await entityManager.save(InvoiceEntity, invoice);
+                await entityManager.save(Invoice, invoice);
             }
         });
     }

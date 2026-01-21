@@ -13,9 +13,10 @@ import {
 } from 'src/common/utils/regex.const';
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import { IUser } from '../interfaces/user.interface';
+import { VersionedEntityBase } from '../../common/entities/versioned-base.entity';
 
 @Entity({ name: 'users' })
-export class UserEntity implements IUser {
+export class User extends VersionedEntityBase implements IUser {
     @PrimaryGeneratedColumn()
     public id: number;
 
@@ -55,10 +56,4 @@ export class UserEntity implements IUser {
     @Column({ name: 'account_setup', default: false })
     @IsBoolean()
     public accountSetup: boolean;
-
-    @Column({ name: 'created_at' })
-    public createdAt: string;
-
-    @Column({ name: 'updated_at', default: new Date().toISOString() })
-    public updatedAt: string;
 }

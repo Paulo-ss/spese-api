@@ -1,52 +1,59 @@
 import {
     Column,
     Entity,
+    JoinColumn,
     ManyToOne,
     PrimaryGeneratedColumn,
-    UpdateDateColumn,
 } from 'typeorm';
 import { IExpense } from '../interfaces/expense.interface';
 import { IBankAccount } from 'src/bank-accounts/interfaces/bank-account.interface';
 import { ICreditCard } from 'src/credit-cards/interfaces/credit-card.interface';
 import { ExpenseType } from '../enums/expense-type.enum';
 import { ExpenseStatus } from '../enums/expense-status.enum';
-import { BankAccountEntity } from 'src/bank-accounts/entities/bank.entity';
-import { CreditCardEntity } from 'src/credit-cards/entities/credit-card.entity';
+import { BankAccount } from 'src/bank-accounts/entities/bank.entity';
+import { CreditCard } from 'src/credit-cards/entities/credit-card.entity';
 import { ExpenseCategory } from '../enums/expense-category.enum';
 import { IInvoice } from 'src/credit-cards/interfaces/invoice.interface';
-import { InvoiceEntity } from 'src/credit-cards/entities/invoice.entity';
-import { CategoryEntity } from 'src/category/entities/category.entity';
+import { Invoice } from 'src/credit-cards/entities/invoice.entity';
 import { ISubscription } from 'src/credit-cards/interfaces/subscription.interface';
-import { SubscriptionEntity } from 'src/credit-cards/entities/subscription.entity';
+import { Subscription } from 'src/credit-cards/entities/subscription.entity';
 import { ICategory } from 'src/category/interfaces/category.interface';
 import { ITransaction } from 'src/cash-flow/interfaces/cash-flow.interface';
 import { TransactionType } from 'src/cash-flow/interfaces/transaction-type';
 import { NumericColumnTransformer } from '../../common/transformers/column-numeric-transformer.transformer';
+import { Category } from '../../category/entities/category.entity';
+import { VersionedUserEntityBase } from '../../common/entities/versioned-user-base.entity';
 
 @Entity({ name: 'expenses' })
-export class ExpenseEntity implements IExpense, ITransaction {
+export class Expense
+    extends VersionedUserEntityBase
+    implements IExpense, ITransaction
+{
     @PrimaryGeneratedColumn()
     public id: number;
 
-    @ManyToOne(() => BankAccountEntity, (bankAccount) => bankAccount.expenses)
+    @ManyToOne(() => BankAccount, (bankAccount) => bankAccount.expenses)
+    @JoinColumn({ name: 'bank_account_id' })
     public bankAccount?: IBankAccount;
 
-    @ManyToOne(() => CreditCardEntity, (creditCard) => creditCard.expenses)
+    @ManyToOne(() => CreditCard, (creditCard) => creditCard.expenses)
+    @JoinColumn({ name: 'credit_card_id' })
     public creditCard?: ICreditCard;
 
-    @ManyToOne(
-        () => SubscriptionEntity,
-        (subscription) => subscription.expenses,
-        { nullable: true, onDelete: 'SET NULL' },
-    )
+    @ManyToOne(() => Subscription, (subscription) => subscription.expenses, {
+        nullable: true,
+        onDelete: 'SET NULL',
+    })
+    @JoinColumn({ name: 'subscription_id' })
     public subscription?: ISubscription;
 
     @Column('enum', { name: 'expense_type', enum: ExpenseType })
     public expenseType: ExpenseType;
 
-    @ManyToOne(() => InvoiceEntity, (invoice) => invoice.expenses, {
+    @ManyToOne(() => Invoice, (invoice) => invoice.expenses, {
         onDelete: 'SET NULL',
     })
+    @JoinColumn({ name: 'invoice_id' })
     public invoice?: IInvoice;
 
     @Column({
@@ -80,26 +87,16 @@ export class ExpenseEntity implements IExpense, ITransaction {
     @Column('enum', { name: 'category', enum: ExpenseCategory, nullable: true })
     public category?: ExpenseCategory;
 
-    @ManyToOne(
-        () => CategoryEntity,
-        (customCategory) => customCategory.expenses,
-        { onDelete: 'SET NULL' },
-    )
+    @ManyToOne(() => Category, (customCategory) => customCategory.expenses, {
+        onDelete: 'SET NULL',
+    })
+    @JoinColumn({ name: 'custom_category_id' })
     public customCategory?: ICategory;
-
-    @Column({ name: 'user_id', transformer: new NumericColumnTransformer() })
-    public userId: number;
 
     @Column('timestamp', {
         name: 'expense_date',
     })
     public expenseDate: Date;
-
-    @UpdateDateColumn({
-        type: 'timestamp',
-        name: 'updated_at',
-    })
-    public updatedAt: Date;
 
     get entityId(): number {
         return this.id;

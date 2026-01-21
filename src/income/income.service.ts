@@ -1,6 +1,6 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IncomeEntity } from './entities/income.entity';
+import { Income } from './entities/income.entity';
 import { Repository } from 'typeorm';
 import { CommonService } from 'src/common/common.service';
 import { CreateIncomeDto } from './dto/create-income.dto';
@@ -15,9 +15,9 @@ import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-r
 import { FilterIncomesDto } from './dto/filter-incomes.dto';
 import { BankAccountsService } from 'src/bank-accounts/bank-accounts.service';
 import {
+    formatDate,
     getFirstDayOfMonth,
     getLastDayOfMonth,
-    formatDate,
 } from '../common/utils/dates.utils';
 import { RedisPublisher } from '../async-worker/publisher/redis.publisher';
 import { ITransactionMessage } from '../async-worker/types/messages';
@@ -28,18 +28,15 @@ import dayjs from 'dayjs';
 @Injectable()
 export class IncomeService {
     constructor(
-        @InjectRepository(IncomeEntity)
-        private readonly incomesRepository: Repository<IncomeEntity>,
+        @InjectRepository(Income)
+        private readonly incomesRepository: Repository<Income>,
         private readonly commonService: CommonService,
         @Inject(forwardRef(() => BankAccountsService))
         private readonly bankAccountService: BankAccountsService,
         private readonly redisPublisher: RedisPublisher<ITransactionMessage>,
     ) {}
 
-    public async findById(
-        incomeId: number,
-        userId: number,
-    ): Promise<IncomeEntity> {
+    public async findById(incomeId: number, userId: number): Promise<Income> {
         const income = await this.incomesRepository.findOne({
             where: {
                 id: incomeId,
@@ -54,9 +51,7 @@ export class IncomeService {
         return income;
     }
 
-    public async findByFilters(
-        filters: FilterIncomesDto,
-    ): Promise<IncomeEntity[]> {
+    public async findByFilters(filters: FilterIncomesDto): Promise<Income[]> {
         return await this.incomesRepository
             .createQueryBuilder('in')
             .where('in.income_month between :from and :to', {
@@ -102,11 +97,11 @@ export class IncomeService {
     public async create(
         createIncome: CreateIncomeDto,
         userId: number,
-    ): Promise<IncomeEntity> {
+    ): Promise<Income> {
         const newIncome = this.incomesRepository.create({
             name: createIncome.name,
             value: createIncome.value,
-            incomeMonth: dayjs(createIncome.incomeMonth).toDate(),
+            incomeDate: dayjs(createIncome.incomeDate).toDate(),
             bankAccount: createIncome.bankAccountId
                 ? await this.bankAccountService.findById(
                       createIncome.bankAccountId,
@@ -114,7 +109,7 @@ export class IncomeService {
                       false,
                   )
                 : undefined,
-            userId: userId,
+            userId,
         });
 
         await this.commonService.saveEntity(this.incomesRepository, newIncome);
@@ -134,7 +129,7 @@ export class IncomeService {
         { name, value }: UpdateIncomeDto,
         userId: number,
         incomeId: number,
-    ): Promise<IncomeEntity> {
+    ): Promise<Income> {
         const income = await this.findById(incomeId, userId);
         const originalPrice = income.price;
 

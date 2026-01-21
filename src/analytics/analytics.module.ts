@@ -6,14 +6,14 @@ import { ExpensesModule } from 'src/expenses/expenses.module';
 import { CreditCardsModule } from 'src/credit-cards/credit-cards.module';
 import { ReportsService } from './reports.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ReportEntity } from './entities/report.entity';
+import { Report } from './entities/report.entity';
 import { ReportsController } from './reports.controller';
 import { NotificationsModule } from 'src/notifications/notifications.module';
 import { AsyncWorkerModule } from '../async-worker/async-worker.module';
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([ReportEntity]),
+        TypeOrmModule.forFeature([Report]),
         forwardRef(() => IncomeModule),
         ExpensesModule,
         CreditCardsModule,

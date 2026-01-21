@@ -1,10 +1,10 @@
 import { Banks } from 'src/bank-accounts/enums/banks.enum';
 import { SimplifiedCreditCardInterface } from '../interfaces/simplified-credit-card.interface';
-import { CreditCardEntity } from '../entities/credit-card.entity';
+import { CreditCard } from '../entities/credit-card.entity';
 import { InvoiceStatus } from '../enums/invoice-status.enum';
 import { getInvoiceMonth } from '../utils/get-invoice-month.util';
 import { getNextBusinessDay, getToday } from 'src/common/utils/dates.utils';
-import { InvoiceEntity } from '../entities/invoice.entity';
+import { Invoice } from '../entities/invoice.entity';
 
 export class SimplifiedCreditCardDto implements SimplifiedCreditCardInterface {
     public id: number;
@@ -26,7 +26,7 @@ export class SimplifiedCreditCardDto implements SimplifiedCreditCardInterface {
         invoices,
         status,
     }: {
-        invoices: InvoiceEntity[];
+        invoices: Invoice[];
         status: InvoiceStatus;
     }): number {
         return invoices.reduce((total, invoice) => {
@@ -38,7 +38,7 @@ export class SimplifiedCreditCardDto implements SimplifiedCreditCardInterface {
         }, 0);
     }
 
-    public static entityToDto(creditCard: CreditCardEntity) {
+    public static entityToDto(creditCard: CreditCard) {
         const currentInvoice = creditCard.invoices.find(
             (invoice) => invoice.status === InvoiceStatus.OPENED_CURRENT,
         );

@@ -1,4 +1,4 @@
-import { InvoiceEntity } from '../entities/invoice.entity';
+import { Invoice } from '../entities/invoice.entity';
 import { IClosedInvoices } from '../interfaces/closed-invoices.interface';
 import { ICreditCard } from '../interfaces/credit-card.interface';
 
@@ -12,7 +12,7 @@ export class ClosedInvoicesDto implements IClosedInvoices {
     Object.assign(this, values);
   }
 
-  public static entityToDto(invoice: InvoiceEntity) {
+  public static entityToDto(invoice: Invoice) {
     const month = new Date(invoice.dueDate).toISOString().split('T')[0];
 
     return new ClosedInvoicesDto({

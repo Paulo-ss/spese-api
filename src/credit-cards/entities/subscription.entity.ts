@@ -1,43 +1,44 @@
 import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  ManyToOne,
-  OneToMany,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
+    Column,
+    Entity,
+    JoinColumn,
+    ManyToOne,
+    OneToMany,
+    PrimaryGeneratedColumn,
 } from 'typeorm';
 import { ISubscription } from '../interfaces/subscription.interface';
-import { CreditCardEntity } from './credit-card.entity';
-import { ExpenseEntity } from 'src/expenses/entities/expense.entity';
+import { CreditCard } from './credit-card.entity';
+import { Expense } from 'src/expenses/entities/expense.entity';
 import { IExpense } from 'src/expenses/interfaces/expense.interface';
+import { VersionedUserEntityBase } from '../../common/entities/versioned-user-base.entity';
+import { NumericColumnTransformer } from '../../common/transformers/column-numeric-transformer.transformer';
 
 @Entity({ name: 'subscriptions' })
-export class SubscriptionEntity implements ISubscription {
-  @PrimaryGeneratedColumn()
-  public id: number;
+export class Subscription
+    extends VersionedUserEntityBase
+    implements ISubscription
+{
+    @PrimaryGeneratedColumn()
+    public id: number;
 
-  @Column({ name: 'name' })
-  public name: string;
+    @Column({ name: 'name' })
+    public name: string;
 
-  @Column('decimal', { name: 'price', precision: 10, scale: 2 })
-  public price: number;
+    @Column('decimal', {
+        name: 'price',
+        precision: 10,
+        scale: 2,
+        transformer: new NumericColumnTransformer(),
+    })
+    public price: number;
 
-  @ManyToOne(() => CreditCardEntity, (creditCard) => creditCard.subscriptions)
-  public creditCard: CreditCardEntity;
+    @ManyToOne(() => CreditCard, (creditCard) => creditCard.subscriptions)
+    @JoinColumn({ name: 'credit_card_id' })
+    public creditCard: CreditCard;
 
-  @OneToMany(() => ExpenseEntity, (expense) => expense.subscription)
-  public expenses: IExpense[];
+    @OneToMany(() => Expense, (expense) => expense.subscription)
+    public expenses: IExpense[];
 
-  @Column({ name: 'billing_day', nullable: true })
-  public billingDay: number;
-
-  @Column({ name: 'user_id' })
-  public userId: number;
-
-  @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
-  public createdAt: Date;
-
-  @UpdateDateColumn({ type: 'timestamp', name: 'updated_at' })
-  public updatedAt: Date;
+    @Column({ name: 'billing_day', nullable: true })
+    public billingDay: number;
 }

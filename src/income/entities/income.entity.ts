@@ -1,19 +1,23 @@
 import {
     Column,
     Entity,
+    JoinColumn,
     ManyToOne,
     PrimaryGeneratedColumn,
-    UpdateDateColumn,
 } from 'typeorm';
 import { IIncome } from '../interfaces/income.interface';
-import { BankAccountEntity } from 'src/bank-accounts/entities/bank.entity';
+import { BankAccount } from 'src/bank-accounts/entities/bank.entity';
 import { IBankAccount } from 'src/bank-accounts/interfaces/bank-account.interface';
 import { ITransaction } from 'src/cash-flow/interfaces/cash-flow.interface';
 import { TransactionType } from 'src/cash-flow/interfaces/transaction-type';
 import { NumericColumnTransformer } from '../../common/transformers/column-numeric-transformer.transformer';
+import { VersionedUserEntityBase } from '../../common/entities/versioned-user-base.entity';
 
 @Entity({ name: 'incomes' })
-export class IncomeEntity implements IIncome, ITransaction {
+export class Income
+    extends VersionedUserEntityBase
+    implements IIncome, ITransaction
+{
     @PrimaryGeneratedColumn()
     public id: number;
 
@@ -28,19 +32,14 @@ export class IncomeEntity implements IIncome, ITransaction {
     })
     public value: number;
 
-    @ManyToOne(() => BankAccountEntity, { nullable: true })
+    @ManyToOne(() => BankAccount, { nullable: true })
+    @JoinColumn({ name: 'bank_account_id' })
     public bankAccount?: IBankAccount;
 
-    @Column({ name: 'user_id', transformer: new NumericColumnTransformer() })
-    public userId: number;
-
-    @Column('timestamp', {
-        name: 'income_month',
+    @Column('date', {
+        name: 'income_date',
     })
-    public incomeMonth: Date;
-
-    @UpdateDateColumn({ type: 'timestamp', name: 'updated_at' })
-    public updatedAt: Date;
+    public incomeDate: Date;
 
     get entityId(): number {
         return this.id;
@@ -59,10 +58,10 @@ export class IncomeEntity implements IIncome, ITransaction {
     }
 
     get start(): Date {
-        return this.incomeMonth;
+        return this.incomeDate;
     }
 
     get end(): Date {
-        return this.incomeMonth;
+        return this.incomeDate;
     }
 }

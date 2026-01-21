@@ -1,22 +1,25 @@
 import {
     Column,
-    CreateDateColumn,
     Entity,
+    JoinColumn,
     ManyToOne,
     OneToMany,
     PrimaryGeneratedColumn,
-    UpdateDateColumn,
 } from 'typeorm';
 import { IInvoice } from '../interfaces/invoice.interface';
-import { CreditCardEntity } from './credit-card.entity';
-import { ExpenseEntity } from 'src/expenses/entities/expense.entity';
+import { CreditCard } from './credit-card.entity';
+import { Expense } from 'src/expenses/entities/expense.entity';
 import { InvoiceStatus } from '../enums/invoice-status.enum';
 import { NumericColumnTransformer } from 'src/common/transformers/column-numeric-transformer.transformer';
 import { ITransaction } from 'src/cash-flow/interfaces/cash-flow.interface';
 import { TransactionType } from 'src/cash-flow/interfaces/transaction-type';
+import { VersionedUserEntityBase } from '../../common/entities/versioned-user-base.entity';
 
 @Entity({ name: 'invoices' })
-export class InvoiceEntity implements IInvoice, ITransaction {
+export class Invoice
+    extends VersionedUserEntityBase
+    implements IInvoice, ITransaction
+{
     @PrimaryGeneratedColumn()
     public id: number;
 
@@ -44,23 +47,15 @@ export class InvoiceEntity implements IInvoice, ITransaction {
     @Column('date', { name: 'due_date' })
     public dueDate: Date;
 
-    @ManyToOne(() => CreditCardEntity, (creditCard) => creditCard.invoices)
-    public creditCard: CreditCardEntity;
+    @ManyToOne(() => CreditCard, (creditCard) => creditCard.invoices)
+    @JoinColumn({ name: 'credit_card_id' })
+    public creditCard: CreditCard;
 
-    @OneToMany(() => ExpenseEntity, (expense) => expense.invoice)
-    public expenses: ExpenseEntity[];
+    @OneToMany(() => Expense, (expense) => expense.invoice)
+    public expenses: Expense[];
 
     @Column('enum', { name: 'status', enum: InvoiceStatus })
     public status: InvoiceStatus;
-
-    @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
-    public createdAt: Date;
-
-    @UpdateDateColumn({ type: 'timestamp', name: 'updated_at' })
-    public updatedAt: Date;
-
-    @Column({ name: 'user_id' })
-    public userId: number;
 
     get entityId(): number {
         return this.id;

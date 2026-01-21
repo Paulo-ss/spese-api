@@ -5,7 +5,7 @@ import {
     UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { BankAccountEntity } from './entities/bank.entity';
+import { BankAccount } from './entities/bank.entity';
 import { Repository } from 'typeorm';
 import { CreateBankAccountDto } from './dto/create-bank-account.dto';
 import { CommonService } from 'src/common/common.service';
@@ -18,8 +18,8 @@ import { OperationType } from '../common/interfaces/operation-type';
 @Injectable()
 export class BankAccountsService {
     constructor(
-        @InjectRepository(BankAccountEntity)
-        private readonly bankAccountRepository: Repository<BankAccountEntity>,
+        @InjectRepository(BankAccount)
+        private readonly bankAccountRepository: Repository<BankAccount>,
         private readonly commonService: CommonService,
         @Inject(forwardRef(() => IncomeService))
         private readonly incomeService: IncomeService,
@@ -29,7 +29,7 @@ export class BankAccountsService {
         bankAccountId: number,
         userId: number,
         checkEntityExistence = true,
-    ): Promise<BankAccountEntity> {
+    ): Promise<BankAccount> {
         const bankAccount = await this.bankAccountRepository.findOneBy({
             id: bankAccountId,
         });
@@ -50,7 +50,7 @@ export class BankAccountsService {
         return bankAccount;
     }
 
-    public async findByUserId(userId: number): Promise<BankAccountEntity[]> {
+    public async findByUserId(userId: number): Promise<BankAccount[]> {
         const bankAccount = await this.bankAccountRepository.findBy({ userId });
         this.commonService.checkEntityExistence(bankAccount, 'Conta bancária');
 
@@ -60,7 +60,7 @@ export class BankAccountsService {
     public async create(
         createBankAccountDto: CreateBankAccountDto,
         userId: number,
-    ): Promise<BankAccountEntity> {
+    ): Promise<BankAccount> {
         const newBankAccount = this.bankAccountRepository.create({
             bank: createBankAccountDto.bank,
             currentBalance: createBankAccountDto.currentBalance,
@@ -79,7 +79,7 @@ export class BankAccountsService {
         bankAccounts: CreateBankAccountDto[],
         userId: number,
     ): Promise<IGenericMessageResponse> {
-        const accounts: BankAccountEntity[] = [];
+        const accounts: BankAccount[] = [];
 
         for (const bankAccount of bankAccounts) {
             accounts.push(
@@ -105,7 +105,7 @@ export class BankAccountsService {
         id: number,
         updateBankAccountDto: UpdateBankAccountDto,
         userId: number,
-    ): Promise<BankAccountEntity> {
+    ): Promise<BankAccount> {
         const bankAccount = await this.findById(id, userId);
         bankAccount.currentBalance = updateBankAccountDto.currentBalance;
 
@@ -133,7 +133,7 @@ export class BankAccountsService {
                 transactionType,
             } = transaction;
 
-            const bankAccount = await entityManager.findOne(BankAccountEntity, {
+            const bankAccount = await entityManager.findOne(BankAccount, {
                 where: {
                     userId,
                     id: bankAccountId,
@@ -153,7 +153,7 @@ export class BankAccountsService {
 
                 bankAccount.currentBalance += transformedPrice;
 
-                await entityManager.save(BankAccountEntity, bankAccount);
+                await entityManager.save(BankAccount, bankAccount);
             }
         });
     }

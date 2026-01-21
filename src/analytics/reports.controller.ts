@@ -13,7 +13,7 @@ import { ReportsService } from './reports.service';
 import { IsAuthenticatedGuard } from 'src/guards/is-authenticated.guard';
 import { CurrentUser } from 'src/decorators/current-user.decorator';
 import { concat, from, map } from 'rxjs';
-import { ReportEntity } from './entities/report.entity';
+import { Report } from './entities/report.entity';
 import { ReportJobDto } from './dto/report-job.dto';
 import { ReportStatus } from './enums/report-status.enum';
 
@@ -29,7 +29,7 @@ export class ReportsController {
     ) {
         return concat(
             from(this.reportsService.getReportById(id)).pipe(
-                map((data: ReportEntity) => ({
+                map((data: Report) => ({
                     data: { id: id, status: data?.status },
                 })),
             ),
@@ -56,7 +56,7 @@ export class ReportsController {
     @Get('/user')
     public async getAllReportsForUser(
         @CurrentUser() userId: number,
-    ): Promise<ReportEntity[]> {
+    ): Promise<Report[]> {
         return this.reportsService.getUsersReports(userId);
     }
 
