@@ -1,18 +1,7 @@
-import { formatInTimeZone } from 'date-fns-tz';
 import * as dayjs from 'dayjs';
 import { Dayjs } from 'dayjs';
-import { DATE_YYYY_MM_DD_REGEX, DATE_YYYY_MM_REGEX } from './regex.const';
-import { BadRequestException } from '@nestjs/common';
 
 type DateTypes = Date | string | Dayjs;
-
-export const formatInTimezone = (
-    date: DateTypes,
-    timezone: string,
-    formatStr: string = 'yyyy-MM-dd HH:mm:ss',
-): string => {
-    return formatInTimeZone(dayjs(date).toDate(), timezone ?? 'UTC', formatStr);
-};
 
 export const isDateGreaterThanOrEqualTo = ({
     date,
@@ -24,15 +13,18 @@ export const isDateGreaterThanOrEqualTo = ({
     return dayjs(date).isAfter(otherDate) || dayjs(date).isSame(otherDate);
 };
 
-export const getFirstDayOfMonth = (date: DateTypes): string => {
-    return dayjs(date).startOf('month').format('YYYY-MM-DD');
+export const getFirstDayOfMonth = (date: DateTypes): Dayjs => {
+    return dayjs(date).startOf('month');
 };
 
-export const getLastDayOfMonth = (date: DateTypes): string => {
-    return dayjs(date).endOf('month').format('YYYY-MM-DD');
+export const getLastDayOfMonth = (date: DateTypes): Dayjs => {
+    return dayjs(date).endOf('month');
 };
 
-export const getDatesBetween = (startDate: Date, endDate: Date): Date[] => {
+export const getDatesBetween = (
+    startDate: DateTypes,
+    endDate: DateTypes,
+): Date[] => {
     const dates: Date[] = [];
     let currentDate = dayjs(startDate);
 
@@ -63,83 +55,53 @@ export const getMonthsInBetween = (
         );
 };
 
-export const getMonthCalendarDates = (date: Date) => {
-    const firstDayOfTheMonth = new Date(date.getFullYear(), date.getMonth(), 1);
-    const lastDayOfTheMonth = new Date(
-        date.getFullYear(),
-        date.getMonth() + 1,
-        0,
-    );
+export const getMonthCalendarDates = (date: DateTypes) => {
+    const firstDayOfTheMonth = getFirstDayOfMonth(date);
+    const lastDayOfTheMonth = getLastDayOfMonth(date);
 
     const calendarDates: Date[] = [];
 
-    const previousDay = new Date(firstDayOfTheMonth);
-    previousDay.setDate(previousDay.getDate() - 1);
+    let previousDay = firstDayOfTheMonth.subtract(1, 'day');
 
-    while (
-        previousDay.toLocaleDateString('en-us', { weekday: 'long' }) !==
-        'Saturday'
-    ) {
-        calendarDates.unshift(new Date(previousDay));
-        previousDay.setDate(previousDay.getDate() - 1);
+    // 6 is Saturday
+    while (previousDay.day() !== 6) {
+        calendarDates.unshift(previousDay.toDate());
+        previousDay = previousDay.subtract(1, 'day');
     }
 
     calendarDates.push(
         ...getDatesBetween(firstDayOfTheMonth, lastDayOfTheMonth),
     );
 
-    const nextDay = new Date(lastDayOfTheMonth);
-    nextDay.setDate(nextDay.getDate() + 1);
+    let nextDay = lastDayOfTheMonth.add(1, 'day');
 
-    while (
-        nextDay.toLocaleDateString('en-us', { weekday: 'long' }) !== 'Sunday'
-    ) {
-        calendarDates.push(new Date(nextDay));
-        nextDay.setDate(nextDay.getDate() + 1);
+    // 0 is Sunday
+    while (nextDay.day() !== 0) {
+        calendarDates.push(nextDay.toDate());
+        nextDay = nextDay.add(1, 'day');
     }
 
     return calendarDates;
 };
 
-export const getNextBusinessDay = (date: Date) => {
-    const dayOfTheWeek = date.toLocaleDateString('en-us', { weekday: 'long' });
+export const getNextBusinessDay = (date: DateTypes) => {
+    const dayjsDate = dayjs(date);
 
-    if (dayOfTheWeek === 'Saturday') {
-        date.setDate(date.getDate() + 2);
+    if (dayjsDate.day() === 6) {
+        return dayjsDate.add(2, 'day');
     }
 
-    if (dayOfTheWeek === 'Sunday') {
-        date.setDate(date.getDate() + 1);
+    if (dayjsDate.day() === 0) {
+        return dayjsDate.add(1, 'day');
     }
 
-    return date;
-};
-
-const validateDatePattern = (dateString: string) => {
-    if (
-        !(
-            DATE_YYYY_MM_DD_REGEX.test(dateString) ||
-            DATE_YYYY_MM_REGEX.test(dateString)
-        )
-    ) {
-        throw new BadRequestException(
-            'Invalid month and year string. It must obey the patterns: YYYY-MM-DD or YYYY-MM',
-        );
-    }
-};
-
-export const getYearAndMonthAndDay = (dateString: string): number[] => {
-    validateDatePattern(dateString);
-
-    return dateString.split('-').map(Number);
-};
-
-export const getYearAndMonth = (dateString: string): number[] => {
-    validateDatePattern(dateString);
-
-    return dateString.split('-').map(Number);
+    return dayjsDate;
 };
 
 export const formatDate = (date: DateTypes, template: string): string => {
     return dayjs(date).format(template);
+};
+
+export const getToday = (): Dayjs => {
+    return dayjs();
 };

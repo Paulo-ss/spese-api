@@ -12,38 +12,35 @@ import { DataSource, EntityManager, Repository } from 'typeorm';
 import slugify from 'slugify';
 import { IGenericMessageResponse } from './interfaces/generic-message-response.interface';
 import { v4 } from 'uuid';
-import { CurrentUser } from 'src/decorators/current-user.decorator';
 import { TransactionType } from '../cash-flow/interfaces/transaction-type';
 import { OperationType } from './interfaces/operation-type';
 import { getNegativeNumber } from './utils/numbers.utils';
 import { ITransaction } from '../cash-flow/interfaces/cash-flow.interface';
-import { formatInTimezone } from './utils/dates.utils';
-import { RequestContextService } from './request-context.service';
+import { formatDate } from './utils/dates.utils';
 
 @Injectable()
 export class CommonService {
     private readonly loggerService: LoggerService;
 
-    constructor(
-        private dataSource: DataSource,
-        private readonly requestContext: RequestContextService,
-    ) {
+    constructor(private readonly dataSource: DataSource) {
         this.loggerService = new Logger(CommonService.name);
     }
 
     public formatName(title: string): string {
         return title
             .trim()
-            .replace(/\n/g, ' ')
-            .replace(/\s\s+/g, ' ')
-            .replace(/\w\S*/g, (w) => w.replace(/^\w/, (l) => l.toUpperCase()));
+            .replaceAll(/\n/, ' ')
+            .replaceAll(/\s\s+/g, ' ')
+            .replaceAll(/\w\S*/g, (w) =>
+                w.replace(/^\w/, (l) => l.toUpperCase()),
+            );
     }
 
     public generatePointSlug(str: string): string {
         return slugify(str, {
             lower: true,
             replacement: '.',
-            remove: /['_\.\-]/g,
+            remove: /['_.-]/g,
         });
     }
 
@@ -83,7 +80,7 @@ export class CommonService {
         name: string,
     ): void {
         if (isNull(entity) || isUndefined(entity)) {
-            throw new NotFoundException(`${name} não encontrado.`);
+            throw new NotFoundException(`${name} not found.`);
         }
     }
 
@@ -109,10 +106,6 @@ export class CommonService {
         return this.dataSource.transaction(async (entityManager) => {
             return await callback(entityManager);
         });
-    }
-
-    public async getCurrentUserId(@CurrentUser() userId: number) {
-        return userId;
     }
 
     public transformPriceByTransactionAndOperationType({
@@ -150,15 +143,13 @@ export class CommonService {
     }: {
         transactions: ITransaction[];
     }): ITransaction[] {
-        const userTimezone = this.requestContext.getTimezone();
-
         return transactions.map((transaction) => ({
             title: transaction.title,
             price: transaction.price,
             entityId: transaction.entityId,
             type: transaction.type,
-            start: formatInTimezone(transaction.start, userTimezone),
-            end: formatInTimezone(transaction.end, userTimezone),
+            start: formatDate(transaction.start, 'YYYY-MM-DD'),
+            end: formatDate(transaction.end, 'YYYY-MM-DD'),
         }));
     }
 }

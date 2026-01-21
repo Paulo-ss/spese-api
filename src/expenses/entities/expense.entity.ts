@@ -21,6 +21,7 @@ import { SubscriptionEntity } from 'src/credit-cards/entities/subscription.entit
 import { ICategory } from 'src/category/interfaces/category.interface';
 import { ITransaction } from 'src/cash-flow/interfaces/cash-flow.interface';
 import { TransactionType } from 'src/cash-flow/interfaces/transaction-type';
+import { NumericColumnTransformer } from '../../common/transformers/column-numeric-transformer.transformer';
 
 @Entity({ name: 'expenses' })
 export class ExpenseEntity implements IExpense, ITransaction {
@@ -48,16 +49,29 @@ export class ExpenseEntity implements IExpense, ITransaction {
     })
     public invoice?: IInvoice;
 
-    @Column({ name: 'installment_number', nullable: true })
+    @Column({
+        name: 'installment_number',
+        nullable: true,
+        transformer: new NumericColumnTransformer(),
+    })
     public installmentNumber?: number;
 
-    @Column({ name: 'total_installments', nullable: true })
+    @Column({
+        name: 'total_installments',
+        nullable: true,
+        transformer: new NumericColumnTransformer(),
+    })
     public totalInstallments?: number;
 
     @Column({ name: 'name' })
     public name: string;
 
-    @Column('decimal', { name: 'price', precision: 10, scale: 2 })
+    @Column('decimal', {
+        name: 'price',
+        precision: 10,
+        scale: 2,
+        transformer: new NumericColumnTransformer(),
+    })
     public price: number;
 
     @Column('enum', { name: 'status', enum: ExpenseStatus })
@@ -73,7 +87,7 @@ export class ExpenseEntity implements IExpense, ITransaction {
     )
     public customCategory?: ICategory;
 
-    @Column({ name: 'user_id' })
+    @Column({ name: 'user_id', transformer: new NumericColumnTransformer() })
     public userId: number;
 
     @Column('timestamp', {

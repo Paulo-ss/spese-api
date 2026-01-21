@@ -5,12 +5,17 @@ import { Repository } from 'typeorm';
 import { CommonService } from 'src/common/common.service';
 import { CreateCreditCardDto } from './dto/create-credit-card.dto';
 import { UpdateCreditCardDto } from './dto/update-credit-card.dto';
-import { isNull, isUndefined } from 'src/common/utils/validation.utils';
+import {
+    isEmpty,
+    isNull,
+    isNullOrUndefined,
+    isUndefined,
+} from 'src/common/utils/validation.utils';
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
-import { isEmpty } from 'class-validator';
 import { InvoiceStatus } from './enums/invoice-status.enum';
 import { BankAccountsService } from 'src/bank-accounts/bank-accounts.service';
-import { getYearAndMonth } from '../common/utils/dates.utils';
+import { getFirstDayOfMonth } from '../common/utils/dates.utils';
+import dayjs from 'dayjs';
 
 @Injectable()
 export class CreditCardsService {
@@ -22,11 +27,11 @@ export class CreditCardsService {
     ) {}
 
     public async findById(
-        credtiCardId: number,
+        creditCardId: number,
         userId: number,
     ): Promise<CreditCardEntity> {
-        const credtiCard = await this.creditCardRepository.findOne({
-            where: { id: credtiCardId },
+        const creditCard = await this.creditCardRepository.findOne({
+            where: { id: creditCardId },
             relations: {
                 invoices: {
                     expenses: false,
@@ -42,20 +47,20 @@ export class CreditCardsService {
             },
         });
         this.commonService.checkEntityExistence(
-            credtiCard,
+            creditCard,
             'Cartão de crédito',
         );
 
-        if (credtiCard.userId !== userId) {
+        if (creditCard.userId !== userId) {
             throw new UnauthorizedException(
                 'Esse cartão de crédito não pertence ao usuário logado.',
             );
         }
 
-        return credtiCard;
+        return creditCard;
     }
 
-    public async getUsersMonthCreditCardTotal(
+    public async getUserMonthCreditCardTotal(
         userId: number,
         selectedMonth: string,
     ): Promise<{
@@ -68,40 +73,30 @@ export class CreditCardsService {
             .andWhere('cc.user_id = :userId', { userId })
             .getMany();
 
-        if (isEmpty(creditCards)) {
+        if (isNullOrUndefined(creditCards) || isEmpty(creditCards)) {
             return { paidInvoicesTotal: 0, invoicesTotal: 0 };
         }
 
-        const [month, year] = getYearAndMonth(selectedMonth);
-        const firstDayOfTheMonth = new Date(year, month - 1);
-
         let invoicesTotal = 0;
         let paidInvoicesTotal = 0;
-        for (const creditCard of creditCards) {
-            if (
-                !isNull(creditCard.invoices) &&
-                !isUndefined(creditCard.invoices) &&
-                creditCard.invoices.length > 0
-            ) {
-                firstDayOfTheMonth.setDate(creditCard.closingDay);
-                const monthInvoice = creditCard.invoices.find((invoice) => {
-                    if (
-                        firstDayOfTheMonth.toISOString().split('T')[0] ===
-                        String(invoice.closingDate)
-                    ) {
-                        return invoice;
-                    }
-                });
 
-                if (monthInvoice?.status === InvoiceStatus.PAID) {
-                    paidInvoicesTotal += Number(monthInvoice.currentPrice);
-                    invoicesTotal += Number(monthInvoice.currentPrice);
+        for (const creditCard of creditCards) {
+            if (!isEmpty(creditCard.invoices)) {
+                const closingDay = getFirstDayOfMonth(selectedMonth).date(
+                    creditCard.closingDay,
+                );
+                const monthInvoice = creditCard.invoices.find((invoice) =>
+                    closingDay.isSame(dayjs(invoice.closingDate), 'day'),
+                );
+                if (!monthInvoice) {
                     continue;
                 }
 
-                invoicesTotal += monthInvoice?.currentPrice
-                    ? Number(monthInvoice.currentPrice)
-                    : 0;
+                if (monthInvoice.status === InvoiceStatus.PAID) {
+                    paidInvoicesTotal += monthInvoice.currentPrice;
+                }
+
+                invoicesTotal += monthInvoice.currentPrice;
             }
         }
 
@@ -109,21 +104,19 @@ export class CreditCardsService {
     }
 
     public async findByUserId(userId: number): Promise<CreditCardEntity[]> {
-        const creditCards = await this.creditCardRepository
+        return await this.creditCardRepository
             .createQueryBuilder('cc')
             .leftJoinAndSelect('cc.invoices', 'invoice')
             .leftJoinAndSelect('cc.subscriptions', 'subscriptions')
             .where('cc.user_id = :userId', { userId })
             .getMany();
-
-        return creditCards;
     }
 
     public async create(
         creditCard: CreateCreditCardDto,
         userId: number,
     ): Promise<CreditCardEntity> {
-        const newCredtiCard = this.creditCardRepository.create({
+        const newCreditCard = this.creditCardRepository.create({
             ...creditCard,
             bankAccount: creditCard.bankAccountId
                 ? await this.bankAccountService.findById(
@@ -137,20 +130,20 @@ export class CreditCardsService {
 
         await this.commonService.saveEntity(
             this.creditCardRepository,
-            newCredtiCard,
+            newCreditCard,
         );
 
-        return newCredtiCard;
+        return newCreditCard;
     }
 
     public async createMultiple(
         creditCards: CreateCreditCardDto[],
         userId: number,
     ): Promise<IGenericMessageResponse> {
-        const newCredtiCards: CreditCardEntity[] = [];
+        const newCreditCards: CreditCardEntity[] = [];
 
         for (const cc of creditCards) {
-            newCredtiCards.push(
+            newCreditCards.push(
                 this.creditCardRepository.create({
                     ...cc,
                     bankAccount: cc.bankAccountId
@@ -167,7 +160,7 @@ export class CreditCardsService {
 
         await this.commonService.saveMultipleEntities(
             this.creditCardRepository,
-            newCredtiCards,
+            newCreditCards,
         );
 
         return this.commonService.generateGenericMessageResponse(
@@ -200,14 +193,14 @@ export class CreditCardsService {
     }
 
     public async delete(
-        credtiCardId: number,
+        creditCardId: number,
         userId: number,
     ): Promise<IGenericMessageResponse> {
-        const credtiCard = await this.findById(credtiCardId, userId);
+        const creditCard = await this.findById(creditCardId, userId);
 
         await this.commonService.removeEntity(
             this.creditCardRepository,
-            credtiCard,
+            creditCard,
         );
 
         return this.commonService.generateGenericMessageResponse(

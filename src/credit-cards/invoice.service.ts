@@ -10,10 +10,11 @@ import { getInvoiceMonth } from './utils/get-invoice-month.util';
 import { ExpensesService } from 'src/expenses/expenses.service';
 import { ClosedInvoicesDto } from './dto/closed-invoices.dto';
 import {
-    getYearAndMonth,
+    formatDate,
     getNextBusinessDay,
     getFirstDayOfMonth,
     getLastDayOfMonth,
+    getToday,
 } from 'src/common/utils/dates.utils';
 import { isNull } from '../common/utils/validation.utils';
 import { CreditCardEntity } from './entities/credit-card.entity';
@@ -61,8 +62,14 @@ export class InvoiceService {
         date: string,
         userId: number,
     ): Promise<InvoiceEntity[]> {
-        const firstDayOfTheMonth = getFirstDayOfMonth(date);
-        const lastDayOfTheMonth = getLastDayOfMonth(date);
+        const firstDayOfTheMonth = formatDate(
+            getFirstDayOfMonth(date),
+            'YYYY-MM-DD',
+        );
+        const lastDayOfTheMonth = formatDate(
+            getLastDayOfMonth(date),
+            'YYYY-MM-DD',
+        );
 
         return await this.invoiceRepository
             .createQueryBuilder('invoice')
@@ -109,7 +116,7 @@ export class InvoiceService {
         creditCardClosingDay: number;
         date: Date;
     }): InvoiceStatus {
-        const today = new Date();
+        const today = getToday().toDate();
         const { month, year } = getInvoiceMonth(creditCardClosingDay, date);
 
         let invoiceStatus: InvoiceStatus = InvoiceStatus.PAID;
@@ -122,7 +129,7 @@ export class InvoiceService {
         }
 
         const { month: currentInvoiceMonth, year: currentInvoiceYear } =
-            getInvoiceMonth(creditCardClosingDay, new Date());
+            getInvoiceMonth(creditCardClosingDay, today);
         if (month === currentInvoiceMonth && year === currentInvoiceYear) {
             invoiceStatus = InvoiceStatus.OPENED_CURRENT;
         }
@@ -204,7 +211,7 @@ export class InvoiceService {
                 nextInvoiceDate.setMonth(nextInvoiceDate.getMonth() + 1);
 
                 /*
-                 * We use the previous invoice closing data, because it will
+                 * We use the previous invoice closing date, because it will
                  * eventually return the current invoice for that date, which will
                  * always get the next month invoice
                  */
@@ -250,9 +257,9 @@ export class InvoiceService {
             );
         }
 
-        invoiceToBePaid.expenses.forEach(async (expense) => {
+        for (const expense of invoiceToBePaid.expenses) {
             await this.expenseService.payExpense(expense.id);
-        });
+        }
 
         return this.commonService.generateGenericMessageResponse(
             'Invoice paid!',
@@ -317,7 +324,7 @@ export class InvoiceService {
     }
 
     public async markInvoicesAsOverdue(): Promise<ClosedInvoicesDto[]> {
-        const today = new Date().toISOString().split('T')[0];
+        const today = formatDate(getToday(), 'YYYY-MM-DD');
 
         const overdueInvoices = await this.invoiceRepository
             .createQueryBuilder('in')

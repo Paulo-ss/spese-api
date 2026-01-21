@@ -11,15 +11,15 @@ import { TransactionType } from 'src/cash-flow/interfaces/transaction-type';
 import { OperationType } from '../common/interfaces/operation-type';
 import { ExpensesService } from 'src/expenses/expenses.service';
 import {
-    formatInTimezone,
+    formatDate,
     getFirstDayOfMonth,
     getLastDayOfMonth,
     getMonthCalendarDates,
+    getToday,
     isDateGreaterThanOrEqualTo,
 } from 'src/common/utils/dates.utils';
 import { IncomeService } from 'src/income/income.service';
 import { InvoiceService } from 'src/credit-cards/invoice.service';
-import { RequestContextService } from 'src/common/request-context.service';
 import { ITransactionMessage } from '../async-worker/types/messages';
 import * as dayjs from 'dayjs';
 
@@ -33,7 +33,6 @@ export class CashFlowService {
         private readonly expensesService: ExpensesService,
         private readonly incomeService: IncomeService,
         private readonly invoiceService: InvoiceService,
-        private readonly requestContext: RequestContextService,
     ) {}
 
     public async findAllCashFlowDayByDate(
@@ -83,8 +82,14 @@ export class CashFlowService {
     }): Promise<ICashFlowResponse> {
         try {
             const monthDate = dayjs(monthYear).toDate();
-            const fromDate = getFirstDayOfMonth(monthDate);
-            const toDate = getLastDayOfMonth(monthDate);
+            const fromDate = formatDate(
+                getFirstDayOfMonth(monthDate),
+                'YYYY-MM-DD',
+            );
+            const toDate = formatDate(
+                getLastDayOfMonth(monthDate),
+                'YYYY-MM-DD',
+            );
 
             const incomes = this.commonService.mapToTransaction({
                 transactions: await this.incomeService.findByFilters({
@@ -117,7 +122,6 @@ export class CashFlowService {
 
             let dailyCashFlow: TDailyCashFlow = {};
             const monthCalendarDates = getMonthCalendarDates(monthDate);
-            const userTimezone = this.requestContext.getTimezone();
 
             for (const date of monthCalendarDates) {
                 const dayCashFlow = await this.findCashFlowDayByDate({
@@ -128,11 +132,10 @@ export class CashFlowService {
                     continue;
                 }
 
-                const userTimezoneDate = formatInTimezone(date, userTimezone);
                 const isDateGreaterThanOrEqualToToday =
                     isDateGreaterThanOrEqualTo({
                         date: dayjs(date),
-                        otherDate: dayjs(),
+                        otherDate: getToday(),
                     });
 
                 const openingBalance = isDateGreaterThanOrEqualToToday
@@ -142,11 +145,13 @@ export class CashFlowService {
                     ? dayCashFlow.closingBalance + totalBankAccountsBalance
                     : dayCashFlow.closingBalance;
 
+                const formattedDate = formatDate(date, 'YYYY-MM-DD');
+
                 dailyCashFlow = {
                     ...dailyCashFlow,
-                    [userTimezoneDate]: {
+                    [formattedDate]: {
                         transactions: transactions.filter(
-                            ({ start }) => start === userTimezoneDate,
+                            ({ start }) => start === formattedDate,
                         ),
                         openingBalance,
                         closingBalance,

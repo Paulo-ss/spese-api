@@ -5,20 +5,25 @@ import { Repository } from 'typeorm';
 import { CommonService } from 'src/common/common.service';
 import { CreateIncomeDto } from './dto/create-income.dto';
 import { UpdateIncomeDto } from './dto/update-income.dto';
-import { isNull, isUndefined } from 'src/common/utils/validation.utils';
+import {
+    isEmpty,
+    isNull,
+    isNullOrUndefined,
+    isUndefined,
+} from 'src/common/utils/validation.utils';
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
-import { isEmpty } from 'class-validator';
 import { FilterIncomesDto } from './dto/filter-incomes.dto';
 import { BankAccountsService } from 'src/bank-accounts/bank-accounts.service';
 import {
     getFirstDayOfMonth,
     getLastDayOfMonth,
-    getYearAndMonthAndDay,
+    formatDate,
 } from '../common/utils/dates.utils';
 import { RedisPublisher } from '../async-worker/publisher/redis.publisher';
 import { ITransactionMessage } from '../async-worker/types/messages';
 import { ASYNC_WORKER } from '../common/constants/constants';
 import { buildTransactionMessage } from '../async-worker/utils/messages.builders';
+import dayjs from 'dayjs';
 
 @Injectable()
 export class IncomeService {
@@ -52,31 +57,29 @@ export class IncomeService {
     public async findByFilters(
         filters: FilterIncomesDto,
     ): Promise<IncomeEntity[]> {
-        const [year, month, day] = getYearAndMonthAndDay(filters.fromDate);
-        const [toYear, toMonth, toDay] = getYearAndMonthAndDay(filters.toDate);
-
-        const query = this.incomesRepository
+        return await this.incomesRepository
             .createQueryBuilder('in')
             .where('in.income_month between :from and :to', {
-                from: new Date(year, month - 1, day),
-                to: new Date(toYear, toMonth - 1, toDay),
-            });
-
-        if (filters.userId) {
-            query.andWhere('in.user_id = :userId', { userId: filters.userId });
-        }
-
-        query.orderBy('in.income_month', 'DESC');
-
-        return query.getMany();
+                from: filters.fromDate,
+                to: filters.toDate,
+            })
+            .andWhere('in.user_id = :userId', { userId: filters.userId })
+            .orderBy('in.income_month', 'DESC')
+            .getMany();
     }
 
     public async getUsersMonthTotalIncome(
         userId: number,
         incomeDate: string,
     ): Promise<number> {
-        const firstDayOfTheMonth = getFirstDayOfMonth(incomeDate);
-        const lastDayOfTheMonth = getLastDayOfMonth(incomeDate);
+        const firstDayOfTheMonth = formatDate(
+            getFirstDayOfMonth(incomeDate),
+            'YYYY-MM-DD',
+        );
+        const lastDayOfTheMonth = formatDate(
+            getLastDayOfMonth(incomeDate),
+            'YYYY-MM-DD',
+        );
 
         const incomes = await this.incomesRepository
             .createQueryBuilder('in')
@@ -87,7 +90,7 @@ export class IncomeService {
             .andWhere('in.user_id = :userId', { userId })
             .getMany();
 
-        if (isNull(incomes) || isUndefined(incomes) || isEmpty(incomes)) {
+        if (isNullOrUndefined(incomes) || isEmpty(incomes)) {
             return 0;
         }
 
@@ -100,14 +103,10 @@ export class IncomeService {
         createIncome: CreateIncomeDto,
         userId: number,
     ): Promise<IncomeEntity> {
-        const [year, month, day] = getYearAndMonthAndDay(
-            createIncome.incomeMonth,
-        );
-
         const newIncome = this.incomesRepository.create({
             name: createIncome.name,
             value: createIncome.value,
-            incomeMonth: new Date(year, month - 1, day),
+            incomeMonth: dayjs(createIncome.incomeMonth).toDate(),
             bankAccount: createIncome.bankAccountId
                 ? await this.bankAccountService.findById(
                       createIncome.bankAccountId,

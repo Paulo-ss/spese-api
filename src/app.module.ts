@@ -40,6 +40,9 @@ import { CashFlowModule } from './cash-flow/cash-flow.module';
 import { CashFlowDayEntity } from './cash-flow/entities/cash-flow-daily.entity';
 import { AsyncWorkerModule } from './async-worker/async-worker.module';
 import { ClsModule } from 'nestjs-cls';
+import { ClsPluginTransactional } from '@nestjs-cls/transactional';
+import { TransactionalAdapterTypeOrm } from '@nestjs-cls/transactional-adapter-typeorm';
+import { DataSource } from 'typeorm';
 
 @Module({
     imports: [
@@ -71,6 +74,7 @@ import { ClsModule } from 'nestjs-cls';
                 CashFlowDayEntity,
             ],
             synchronize: !JSON.parse(process.env.IS_PRODUCTION),
+            useUTC: true,
         }),
         ScheduleModule.forRoot(),
         ClsModule.forRoot({
@@ -78,6 +82,14 @@ import { ClsModule } from 'nestjs-cls';
             middleware: {
                 mount: true,
             },
+            plugins: [
+                new ClsPluginTransactional({
+                    connectionName: 'default',
+                    adapter: new TransactionalAdapterTypeOrm({
+                        dataSourceToken: DataSource,
+                    }),
+                }),
+            ],
         }),
         UsersModule,
         AuthModule,

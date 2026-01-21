@@ -15,7 +15,7 @@ export class UpdateIncomeDto {
 
     @IsOptional()
     @Matches(DATE_YYYY_MM_DD_REGEX, {
-        message: 'A data deve estar no padrão MM-dd-yyyy',
+        message: 'A data deve estar no padrão YYYY-MM-DD',
     })
     public incomeMonth?: string;
 }

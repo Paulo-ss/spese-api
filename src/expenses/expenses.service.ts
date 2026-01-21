@@ -22,6 +22,7 @@ import { ITransactionMessage } from 'src/async-worker/types/messages';
 import {
     getFirstDayOfMonth,
     getLastDayOfMonth,
+    formatDate,
 } from '../common/utils/dates.utils';
 import { buildTransactionMessage } from '../async-worker/utils/messages.builders';
 import { CreditCardEntity } from '../credit-cards/entities/credit-card.entity';
@@ -73,8 +74,14 @@ export class ExpensesService {
             .leftJoin('e.creditCard', 'cc');
 
         if (filters.month) {
-            const firstDayOfTheMonth = getFirstDayOfMonth(filters.month);
-            const lastDayOfTheMonth = getLastDayOfMonth(filters.month);
+            const firstDayOfTheMonth = formatDate(
+                getFirstDayOfMonth(filters.month),
+                'YYYY-MM-DD',
+            );
+            const lastDayOfTheMonth = formatDate(
+                getLastDayOfMonth(filters.month),
+                'YYYY-MM-DD',
+            );
 
             query.where(
                 'e.expense_date between :firstDayOfTheMonth and :lastDayOfTheMonth',

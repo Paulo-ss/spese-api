@@ -8,151 +8,155 @@ import { hash } from 'bcrypt';
 
 @Injectable()
 export class UsersService {
-  constructor(
-    @InjectRepository(UserEntity)
-    private readonly usersRepository: Repository<UserEntity>,
-    private readonly commonService: CommonService,
-  ) {}
+    constructor(
+        @InjectRepository(UserEntity)
+        private readonly usersRepository: Repository<UserEntity>,
+        private readonly commonService: CommonService,
+    ) {}
 
-  private async generateUsername(name: string): Promise<string> {
-    const pointSlug = this.commonService.generatePointSlug(name);
-    const count = await this.usersRepository.countBy({
-      username: `${pointSlug}%`,
-    });
+    private async generateUsername(name: string): Promise<string> {
+        const pointSlug = this.commonService.generatePointSlug(name);
+        const count = await this.usersRepository.countBy({
+            username: `${pointSlug}%`,
+        });
 
-    if (count > 0) {
-      return `${pointSlug}${count}`;
+        if (count > 0) {
+            return `${pointSlug}${count}`;
+        }
+
+        return pointSlug;
     }
 
-    return pointSlug;
-  }
+    private async checkIfEmailAlreadyExists(email: string): Promise<void> {
+        const count = await this.usersRepository.countBy({ email });
 
-  private async checkIfEmailAlreadyExists(email: string): Promise<void> {
-    const count = await this.usersRepository.countBy({ email });
-
-    if (count > 0) {
-      throw new ConflictException('E-Mail já está em uso por outro usuário.');
-    }
-  }
-
-  public async findAll(): Promise<UserEntity[]> {
-    return this.usersRepository.find();
-  }
-
-  public async findOneById(userId: number): Promise<UserEntity> {
-    const user = await this.usersRepository.findOneBy({ id: userId });
-    this.commonService.checkEntityExistence(user, 'Usuário');
-
-    return user;
-  }
-
-  public async findOneByEmail(
-    email: string,
-    checkForExistence = true,
-  ): Promise<UserEntity> {
-    const user = await this.usersRepository.findOneBy({ email });
-
-    if (checkForExistence) {
-      this.commonService.checkEntityExistence(user, 'Usuário');
+        if (count > 0) {
+            throw new ConflictException(
+                'E-Mail já está em uso por outro usuário.',
+            );
+        }
     }
 
-    return user;
-  }
-
-  public async findOneByUsername(username: string): Promise<UserEntity> {
-    const user = await this.usersRepository.findOneBy({ username });
-    this.commonService.checkEntityExistence(user, 'Usuário');
-
-    return user;
-  }
-
-  public async findOneByEmailOrUsername(
-    emailOrUsername: string,
-  ): Promise<UserEntity> {
-    if (isEmail(emailOrUsername)) {
-      return this.findOneByEmail(emailOrUsername);
+    public async findAll(): Promise<UserEntity[]> {
+        return this.usersRepository.find();
     }
 
-    return this.findOneByUsername(emailOrUsername);
-  }
+    public async findOneById(userId: number): Promise<UserEntity> {
+        const user = await this.usersRepository.findOneBy({ id: userId });
+        this.commonService.checkEntityExistence(user, 'Usuário');
 
-  public async create(
-    name: string,
-    password: string,
-    email: string,
-    timezone: string,
-  ): Promise<UserEntity> {
-    await this.checkIfEmailAlreadyExists(email);
+        return user;
+    }
 
-    const formattedName = this.commonService.formatName(name);
-    const user = this.usersRepository.create({
-      email,
-      name: formattedName,
-      username: await this.generateUsername(formattedName),
-      password: await hash(password, 10),
-      timezone,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
+    public async findOneByEmail(
+        email: string,
+        checkForExistence = true,
+    ): Promise<UserEntity> {
+        const user = await this.usersRepository.findOneBy({ email });
 
-    await this.commonService.saveEntity<UserEntity>(this.usersRepository, user);
-    return user;
-  }
+        if (checkForExistence) {
+            this.commonService.checkEntityExistence(user, 'Usuário');
+        }
 
-  public async externalOauthCreate(
-    name: string,
-    email: string,
-    timezone: string,
-  ): Promise<UserEntity> {
-    await this.checkIfEmailAlreadyExists(email);
+        return user;
+    }
 
-    const formattedName = this.commonService.formatName(name);
-    const user = this.usersRepository.create({
-      email,
-      name: formattedName,
-      username: await this.generateUsername(formattedName),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      confirmed: true,
-      timezone,
-    });
+    public async findOneByUsername(username: string): Promise<UserEntity> {
+        const user = await this.usersRepository.findOneBy({ username });
+        this.commonService.checkEntityExistence(user, 'Usuário');
 
-    await this.commonService.saveEntity<UserEntity>(this.usersRepository, user);
-    return user;
-  }
+        return user;
+    }
 
-  public async delete(userId: number): Promise<void> {
-    const user = await this.findOneById(userId);
+    public async findOneByEmailOrUsername(
+        emailOrUsername: string,
+    ): Promise<UserEntity> {
+        if (isEmail(emailOrUsername)) {
+            return this.findOneByEmail(emailOrUsername);
+        }
 
-    await this.commonService.removeEntity<UserEntity>(
-      this.usersRepository,
-      user,
-    );
-  }
+        return this.findOneByUsername(emailOrUsername);
+    }
 
-  public async resetPassword(
-    userId: number,
-    password: string,
-  ): Promise<UserEntity> {
-    const user = await this.findOneById(userId);
-    user.password = await hash(password, 10);
-    user.updatedAt = new Date().toISOString();
+    public async create(
+        name: string,
+        password: string,
+        email: string,
+    ): Promise<UserEntity> {
+        await this.checkIfEmailAlreadyExists(email);
 
-    await this.commonService.saveEntity(this.usersRepository, user);
-    return user;
-  }
+        const formattedName = this.commonService.formatName(name);
+        const user = this.usersRepository.create({
+            email,
+            name: formattedName,
+            username: await this.generateUsername(formattedName),
+            password: await hash(password, 10),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        });
 
-  public async confirmUser(user: UserEntity): Promise<void> {
-    user.confirmed = true;
-    user.updatedAt = new Date().toISOString();
+        await this.commonService.saveEntity<UserEntity>(
+            this.usersRepository,
+            user,
+        );
+        return user;
+    }
 
-    await this.commonService.saveEntity(this.usersRepository, user);
-  }
+    public async externalOauthCreate(
+        name: string,
+        email: string,
+    ): Promise<UserEntity> {
+        await this.checkIfEmailAlreadyExists(email);
 
-  public async finishAccountSetup(userId: number): Promise<void> {
-    const user = await this.findOneById(userId);
-    user.accountSetup = true;
+        const formattedName = this.commonService.formatName(name);
+        const user = this.usersRepository.create({
+            email,
+            name: formattedName,
+            username: await this.generateUsername(formattedName),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            confirmed: true,
+        });
 
-    await this.commonService.saveEntity(this.usersRepository, user);
-  }
+        await this.commonService.saveEntity<UserEntity>(
+            this.usersRepository,
+            user,
+        );
+        return user;
+    }
+
+    public async delete(userId: number): Promise<void> {
+        const user = await this.findOneById(userId);
+
+        await this.commonService.removeEntity<UserEntity>(
+            this.usersRepository,
+            user,
+        );
+    }
+
+    public async resetPassword(
+        userId: number,
+        password: string,
+    ): Promise<UserEntity> {
+        const user = await this.findOneById(userId);
+        user.password = await hash(password, 10);
+        user.updatedAt = new Date().toISOString();
+
+        await this.commonService.saveEntity(this.usersRepository, user);
+        return user;
+    }
+
+    public async confirmUser(user: UserEntity): Promise<void> {
+        user.confirmed = true;
+        user.updatedAt = new Date().toISOString();
+
+        await this.commonService.saveEntity(this.usersRepository, user);
+    }
+
+    public async finishAccountSetup(userId: number): Promise<void> {
+        const user = await this.findOneById(userId);
+        user.accountSetup = true;
+
+        await this.commonService.saveEntity(this.usersRepository, user);
+    }
 }

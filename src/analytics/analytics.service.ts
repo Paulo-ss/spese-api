@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { isEmpty } from 'class-validator';
-import { isNull, isUndefined } from 'src/common/utils/validation.utils';
+import {
+    isEmpty,
+    isNull,
+    isNullOrUndefined,
+    isUndefined,
+} from 'src/common/utils/validation.utils';
 import { CreditCardsService } from 'src/credit-cards/credit-cards.service';
 import { ExpenseStatus } from 'src/expenses/enums/expense-status.enum';
 import { ExpensesService } from 'src/expenses/expenses.service';
@@ -33,17 +37,13 @@ export class AnalyticsService {
             month: date,
             userId,
         });
-        if (
-            !isNull(monthExpenses) &&
-            !isUndefined(monthExpenses) &&
-            !isEmpty(monthExpenses)
-        ) {
+        if (!isNullOrUndefined(monthExpenses) && !isEmpty(monthExpenses)) {
             monthExpenses.forEach((expense) => {
                 if (expense.status === ExpenseStatus.PAID) {
-                    monthPaidExpensesTotal += Number(expense.price);
+                    monthPaidExpensesTotal += expense.price;
                 }
 
-                monthExpensesTotal += Number(expense.price);
+                monthExpensesTotal += expense.price;
             });
         }
 
@@ -152,7 +152,7 @@ export class AnalyticsService {
         for (const month of monthsRange) {
             const formattedMonth = formatDate(month, 'YYYY-MM');
             const { invoicesTotal } =
-                await this.creditCardService.getUsersMonthCreditCardTotal(
+                await this.creditCardService.getUserMonthCreditCardTotal(
                     userId,
                     formattedMonth,
                 );

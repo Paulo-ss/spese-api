@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ReportsService } from 'src/analytics/reports.service';
-import { BankAccountsService } from 'src/bank-accounts/bank-accounts.service';
 import { InvoiceService } from 'src/credit-cards/invoice.service';
 import { NotificationsDBService } from 'src/notifications/notifications-db.service';
 
@@ -11,14 +10,15 @@ export class TasksService {
         private readonly notificationsDBService: NotificationsDBService,
         private readonly invoiceService: InvoiceService,
         private readonly reportsService: ReportsService,
-        private readonly bankAccountService: BankAccountsService,
     ) {}
 
     @Cron('0 0 1 11,26 * *', { timeZone: 'America/Sao_Paulo' })
     public async closeInvoices() {
         const closedInvoices = await this.invoiceService.closeInvoices();
 
-        this.notificationsDBService.emitClosedInvoicesEvent(closedInvoices);
+        void this.notificationsDBService.emitClosedInvoicesEvent(
+            closedInvoices,
+        );
     }
 
     @Cron('0 0 1 2-4,18-20 * *', { timeZone: 'America/Sao_Paulo' })
@@ -26,18 +26,20 @@ export class TasksService {
         const overdueInvoices =
             await this.invoiceService.markInvoicesAsOverdue();
 
-        this.notificationsDBService.emitDelayedInvoicesEvent(overdueInvoices);
+        void this.notificationsDBService.emitDelayedInvoicesEvent(
+            overdueInvoices,
+        );
     }
 
     @Cron(CronExpression.EVERY_1ST_DAY_OF_MONTH_AT_MIDNIGHT, {
         timeZone: 'America/Sao_Paulo',
     })
     public async deleteOneMonthNotifications() {
-        this.notificationsDBService.deleteOneMonthNotifications();
+        void this.notificationsDBService.deleteOneMonthNotifications();
     }
 
     @Cron(CronExpression.EVERY_DAY_AT_2AM, { timeZone: 'America/Sao_Paulo' })
     public async deleteReportsOlderThanOneDay() {
-        await this.reportsService.deleteReportsOlderThanOneDay();
+        void this.reportsService.deleteReportsOlderThanOneDay();
     }
 }
