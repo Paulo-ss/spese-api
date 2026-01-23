@@ -1,195 +1,181 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IncomeEntity } from './entities/income.entity';
+import { Income } from './entities/income.entity';
 import { Repository } from 'typeorm';
 import { CommonService } from 'src/common/common.service';
 import { CreateIncomeDto } from './dto/create-income.dto';
 import { UpdateIncomeDto } from './dto/update-income.dto';
-import { isNull, isUndefined } from 'src/common/utils/validation.utils';
+import {
+    isEmpty,
+    isNull,
+    isNullOrUndefined,
+    isUndefined,
+} from 'src/common/utils/validation.utils';
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
-import { isEmpty } from 'class-validator';
 import { FilterIncomesDto } from './dto/filter-incomes.dto';
 import { BankAccountsService } from 'src/bank-accounts/bank-accounts.service';
-import { WageService } from './wage.service';
+import {
+    formatDate,
+    getFirstDayOfMonth,
+    getLastDayOfMonth,
+} from '../common/utils/dates.utils';
+import { RedisPublisher } from '../async-worker/publisher/redis.publisher';
+import { ITransactionMessage } from '../async-worker/types/messages';
+import { ASYNC_WORKER } from '../common/constants/constants';
+import { buildTransactionMessage } from '../async-worker/utils/messages.builders';
+import dayjs from 'dayjs';
 
 @Injectable()
 export class IncomeService {
-  constructor(
-    @InjectRepository(IncomeEntity)
-    private readonly incomesRepository: Repository<IncomeEntity>,
-    @Inject(forwardRef(() => WageService))
-    private readonly wageService: WageService,
-    private readonly commonService: CommonService,
-    @Inject(forwardRef(() => BankAccountsService))
-    private readonly bankAccountService: BankAccountsService,
-  ) {}
+    constructor(
+        @InjectRepository(Income)
+        private readonly incomesRepository: Repository<Income>,
+        private readonly commonService: CommonService,
+        @Inject(forwardRef(() => BankAccountsService))
+        private readonly bankAccountService: BankAccountsService,
+        private readonly redisPublisher: RedisPublisher<ITransactionMessage>,
+    ) {}
 
-  public async findById(
-    incomeId: number,
-    userId: number,
-  ): Promise<IncomeEntity> {
-    const income = await this.incomesRepository.findOne({
-      where: {
-        id: incomeId,
-        userId,
-      },
-      relations: {
-        bankAccount: { expenses: false },
-        wage: { bankAccount: false },
-      },
-    });
-    this.commonService.checkEntityExistence(income, 'Renda');
+    public async findById(incomeId: number, userId: number): Promise<Income> {
+        const income = await this.incomesRepository.findOne({
+            where: {
+                id: incomeId,
+                userId,
+            },
+            relations: {
+                bankAccount: { expenses: false },
+            },
+        });
+        this.commonService.checkEntityExistence(income, 'Income');
 
-    return income;
-  }
-
-  public async findByFilters(
-    filters: FilterIncomesDto,
-  ): Promise<IncomeEntity[]> {
-    const [month, day, year] = filters.fromDate.split('-').map(Number);
-    const [toMonth, toDay, toYear] = filters.toDate.split('-').map(Number);
-
-    const query = this.incomesRepository
-      .createQueryBuilder('in')
-      .where('in.income_month between :from and :to', {
-        from: new Date(year, month - 1, day),
-        to: new Date(toYear, toMonth - 1, toDay),
-      });
-
-    if (filters.userId) {
-      query.andWhere('in.user_id = :userId', { userId: filters.userId });
+        return income;
     }
 
-    if (filters.wageId) {
-      query.andWhere('in.wageId = :wageId', { wageId: filters.wageId });
+    public async findByFilters(filters: FilterIncomesDto): Promise<Income[]> {
+        return await this.incomesRepository
+            .createQueryBuilder('in')
+            .where('in.income_month between :from and :to', {
+                from: filters.fromDate,
+                to: filters.toDate,
+            })
+            .andWhere('in.user_id = :userId', { userId: filters.userId })
+            .orderBy('in.income_month', 'DESC')
+            .getMany();
     }
 
-    query.orderBy('in.income_month', 'DESC');
+    public async getUsersMonthTotalIncome(
+        userId: number,
+        incomeDate: string,
+    ): Promise<number> {
+        const firstDayOfTheMonth = formatDate(
+            getFirstDayOfMonth(incomeDate),
+            'YYYY-MM-DD',
+        );
+        const lastDayOfTheMonth = formatDate(
+            getLastDayOfMonth(incomeDate),
+            'YYYY-MM-DD',
+        );
 
-    return query.getMany();
-  }
+        const incomes = await this.incomesRepository
+            .createQueryBuilder('in')
+            .where('in.income_month between :from and :to', {
+                from: firstDayOfTheMonth,
+                to: lastDayOfTheMonth,
+            })
+            .andWhere('in.user_id = :userId', { userId })
+            .getMany();
 
-  public async getUsersMonthTotalIncome(
-    userId: number,
-    incomeDate: string,
-  ): Promise<number> {
-    const [month, year] = incomeDate.split('-').map(Number);
-    const firstDayOfTheMonth = new Date(year, month - 1)
-      .toISOString()
-      .split('T')[0];
-    const lastDayOfTheMonth = new Date(year, month, 0)
-      .toISOString()
-      .split('T')[0];
+        if (isNullOrUndefined(incomes) || isEmpty(incomes)) {
+            return 0;
+        }
 
-    const incomes = await this.incomesRepository
-      .createQueryBuilder('in')
-      .where('in.income_month between :from and :to', {
-        from: firstDayOfTheMonth,
-        to: lastDayOfTheMonth,
-      })
-      .andWhere('in.user_id = :userId', { userId })
-      .andWhere('in.wageId is null')
-      .getMany();
-
-    if (isNull(incomes) || isUndefined(incomes) || isEmpty(incomes)) {
-      return 0;
+        return incomes.reduce((monthTotal, income) => {
+            return monthTotal + Number(income.value);
+        }, 0);
     }
 
-    return incomes.reduce((monthTotal, income) => {
-      return monthTotal + Number(income.value);
-    }, 0);
-  }
-
-  public async create(
-    createIncome: CreateIncomeDto,
-    userId: number,
-  ): Promise<IncomeEntity> {
-    const [month, day, year] = createIncome.incomeMonth.split('-').map(Number);
-
-    const newIncome = this.incomesRepository.create({
-      name: createIncome.name,
-      value: createIncome.value,
-      incomeMonth: new Date(year, month - 1, day),
-      bankAccount: createIncome.bankAccountId
-        ? await this.bankAccountService.findById(
-            createIncome.bankAccountId,
+    public async create(
+        createIncome: CreateIncomeDto,
+        userId: number,
+    ): Promise<Income> {
+        const newIncome = this.incomesRepository.create({
+            name: createIncome.name,
+            value: createIncome.value,
+            incomeDate: dayjs(createIncome.incomeDate).toDate(),
+            bankAccount: createIncome.bankAccountId
+                ? await this.bankAccountService.findById(
+                      createIncome.bankAccountId,
+                      userId,
+                      false,
+                  )
+                : undefined,
             userId,
-            false,
-          )
-        : undefined,
-      userId: userId,
-      wage: createIncome.wage
-        ? await this.wageService.findById(createIncome.wage.id, userId, false)
-        : undefined,
-    });
+        });
 
-    await this.commonService.saveEntity(this.incomesRepository, newIncome);
+        await this.commonService.saveEntity(this.incomesRepository, newIncome);
 
-    return newIncome;
-  }
+        void this.redisPublisher.publishToStream({
+            streamName: ASYNC_WORKER.REDIS_STREAMS.INCOME_CREATED,
+            message: buildTransactionMessage({
+                transaction: newIncome,
+                userId: newIncome.userId,
+            }),
+        });
 
-  public async createMultiple(
-    incomes: CreateIncomeDto[],
-  ): Promise<IGenericMessageResponse> {
-    for (const income of incomes) {
-      const [month, day, year] = income.incomeMonth.split('-').map(Number);
-
-      const newIncome = this.incomesRepository.create({
-        name: income.name,
-        value: income.value,
-        incomeMonth: new Date(year, month - 1, day),
-        bankAccount: income.bankAccountId
-          ? await this.bankAccountService.findById(
-              income.bankAccountId,
-              income.userId,
-              false,
-            )
-          : undefined,
-        userId: income.userId,
-        wage: income.wage,
-      });
-
-      await this.commonService.saveEntity(this.incomesRepository, newIncome);
+        return newIncome;
     }
 
-    return this.commonService.generateGenericMessageResponse(
-      'Rendas criadas com sucesso.',
-    );
-  }
+    public async update(
+        { name, value }: UpdateIncomeDto,
+        userId: number,
+        incomeId: number,
+    ): Promise<Income> {
+        const income = await this.findById(incomeId, userId);
+        const originalPrice = income.price;
 
-  public async update(
-    { name, value }: UpdateIncomeDto,
-    userId: number,
-    incomeId: number,
-  ): Promise<IncomeEntity> {
-    const income = await this.findById(incomeId, userId);
+        if (!isUndefined(name) && !isNull(name)) {
+            income.name = name;
+        }
 
-    if (!isUndefined(name) && !isNull(name)) {
-      income.name = name;
+        if (!isUndefined(value) && !isNull(value)) {
+            income.value = value;
+        }
+
+        const updatedIncome = await this.commonService.saveEntity(
+            this.incomesRepository,
+            income,
+        );
+
+        void this.redisPublisher.publishToStream({
+            streamName: ASYNC_WORKER.REDIS_STREAMS.INCOME_UPDATED,
+            message: buildTransactionMessage({
+                transaction: updatedIncome,
+                userId: updatedIncome.userId,
+                originalPrice,
+            }),
+        });
+
+        return updatedIncome;
     }
 
-    if (!isUndefined(value) && !isNull(value)) {
-      income.value = value;
+    public async delete(
+        incomeId: number,
+        userId: number,
+    ): Promise<IGenericMessageResponse> {
+        const income = await this.findById(incomeId, userId);
+
+        await this.commonService.removeEntity(this.incomesRepository, income);
+
+        void this.redisPublisher.publishToStream({
+            streamName: ASYNC_WORKER.REDIS_STREAMS.INCOME_DELETED,
+            message: buildTransactionMessage({
+                transaction: income,
+                userId: income.userId,
+            }),
+        });
+
+        return this.commonService.generateGenericMessageResponse(
+            'Successfully deleted income.',
+        );
     }
-
-    const updatedIncome = await this.commonService.saveEntity(
-      this.incomesRepository,
-      income,
-    );
-
-    return updatedIncome;
-  }
-
-  public async delete(
-    incomeId: number,
-    userId: number,
-  ): Promise<IGenericMessageResponse> {
-    const income = await this.findById(incomeId, userId);
-
-    await this.commonService.removeEntity(this.incomesRepository, income);
-
-    return this.commonService.generateGenericMessageResponse(
-      'Renda deletada com sucesso.',
-    );
-  }
 }

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { CategoryEntity } from './entities/category.entity';
+import { Category } from './entities/category.entity';
 import { Repository } from 'typeorm';
 import { CommonService } from 'src/common/common.service';
 import { PersistCategoryDto } from './dto/persist-category.dto';
@@ -9,8 +9,8 @@ import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-r
 @Injectable()
 export class CategoryService {
   constructor(
-    @InjectRepository(CategoryEntity)
-    private readonly categoryRepository: Repository<CategoryEntity>,
+    @InjectRepository(Category)
+    private readonly categoryRepository: Repository<Category>,
     private readonly commonService: CommonService,
   ) {}
 
@@ -18,7 +18,7 @@ export class CategoryService {
     id: number,
     userId: number,
     checkForExistence: boolean = true,
-  ): Promise<CategoryEntity> {
+  ): Promise<Category> {
     const category = await this.categoryRepository.findOne({
       where: { id, userId },
     });
@@ -30,14 +30,14 @@ export class CategoryService {
     return category;
   }
 
-  public async findByUser(userId: number): Promise<CategoryEntity[]> {
+  public async findByUser(userId: number): Promise<Category[]> {
     return await this.categoryRepository.find({ where: { userId } });
   }
 
   public async create(
     categoryDto: PersistCategoryDto,
     userId: number,
-  ): Promise<CategoryEntity> {
+  ): Promise<Category> {
     const category = this.categoryRepository.create({
       name: categoryDto.name,
       color: categoryDto.color,
@@ -52,7 +52,7 @@ export class CategoryService {
     categoriesDto: PersistCategoryDto[],
     userId: number,
   ): Promise<IGenericMessageResponse> {
-    const categories: CategoryEntity[] = [];
+    const categories: Category[] = [];
 
     for (const category of categoriesDto) {
       categories.push(
@@ -78,7 +78,7 @@ export class CategoryService {
     id: number,
     categoryDto: PersistCategoryDto,
     userId: number,
-  ): Promise<CategoryEntity> {
+  ): Promise<Category> {
     const category = await this.findById(id, userId);
     category.name = categoryDto.name;
     category.color = categoryDto.color;

@@ -1,15 +1,15 @@
 import { IsInstance } from 'class-validator';
-import { ExpenseEntity } from 'src/expenses/entities/expense.entity';
-import { CreditCardEntity } from '../entities/credit-card.entity';
-import { InvoiceEntity } from '../entities/invoice.entity';
+import { Expense } from 'src/expenses/entities/expense.entity';
+import { CreditCard } from '../entities/credit-card.entity';
+import { Invoice } from '../entities/invoice.entity';
 
 export class CreateInstallmentDto {
-  @IsInstance(ExpenseEntity)
-  public expense: ExpenseEntity;
+  @IsInstance(Expense)
+  public expense: Expense;
 
-  @IsInstance(CreditCardEntity)
-  public creditCard: CreditCardEntity;
+  @IsInstance(CreditCard)
+  public creditCard: CreditCard;
 
-  @IsInstance(InvoiceEntity)
-  public invoice: InvoiceEntity;
+  @IsInstance(Invoice)
+  public invoice: Invoice;
 }

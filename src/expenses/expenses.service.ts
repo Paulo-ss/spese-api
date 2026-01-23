@@ -1,6 +1,6 @@
-import { Inject, Injectable, forwardRef } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ExpenseEntity } from './entities/expense.entity';
+import { Expense } from './entities/expense.entity';
 import { FindOptionsRelations, Repository } from 'typeorm';
 import { CommonService } from 'src/common/common.service';
 import { FindExpensesFiltersDto } from './dto/find-expenses-filters.dto';
@@ -8,401 +8,387 @@ import { CreateExpenseDto } from './dto/create-expense.dto';
 import { InvoiceService } from 'src/credit-cards/invoice.service';
 import { BankAccountsService } from 'src/bank-accounts/bank-accounts.service';
 import { CreditCardsService } from 'src/credit-cards/credit-cards.service';
-import { BankAccountEntity } from 'src/bank-accounts/entities/bank.entity';
-import { InvoiceEntity } from 'src/credit-cards/entities/invoice.entity';
-import { isNull, isUndefined } from 'src/common/utils/validation.utils';
+import { BankAccount } from 'src/bank-accounts/entities/bank.entity';
+import { Invoice } from 'src/credit-cards/entities/invoice.entity';
 import { InvoiceStatus } from 'src/credit-cards/enums/invoice-status.enum';
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
 import { ExpenseStatus } from './enums/expense-status.enum';
 import { ExpenseCategory } from './enums/expense-category.enum';
-import { getInvoiceMonth } from 'src/credit-cards/utils/get-invoice-month.util';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { CategoryService } from 'src/category/category.service';
+import { RedisPublisher } from 'src/async-worker/publisher/redis.publisher';
+import { ASYNC_WORKER } from 'src/common/constants/constants';
+import { ITransactionMessage } from 'src/async-worker/types/messages';
+import {
+    getFirstDayOfMonth,
+    getLastDayOfMonth,
+    formatDate,
+} from '../common/utils/dates.utils';
+import { buildTransactionMessage } from '../async-worker/utils/messages.builders';
+import { CreditCard } from '../credit-cards/entities/credit-card.entity';
+import { Category } from '../category/entities/category.entity';
 
 @Injectable()
 export class ExpensesService {
-  constructor(
-    @InjectRepository(ExpenseEntity)
-    private readonly expensesRepository: Repository<ExpenseEntity>,
-    @Inject(forwardRef(() => InvoiceService))
-    private readonly invoiceService: InvoiceService,
-    private readonly bankAccountService: BankAccountsService,
-    private readonly creditCardService: CreditCardsService,
-    private readonly commonService: CommonService,
-    private readonly categoryService: CategoryService,
-  ) {}
+    constructor(
+        @InjectRepository(Expense)
+        private readonly expensesRepository: Repository<Expense>,
+        @Inject(forwardRef(() => InvoiceService))
+        private readonly invoiceService: InvoiceService,
+        private readonly bankAccountService: BankAccountsService,
+        private readonly creditCardService: CreditCardsService,
+        private readonly commonService: CommonService,
+        private readonly categoryService: CategoryService,
+        @Inject()
+        private readonly redisPublisher: RedisPublisher<ITransactionMessage>,
+    ) {}
 
-  public async findById(
-    expenseId: number,
-    userId: number,
-    relations: FindOptionsRelations<ExpenseEntity> = {
-      invoice: { creditCard: false, expenses: false },
-      customCategory: { expenses: false },
-    },
-  ): Promise<ExpenseEntity> {
-    const expense = await this.expensesRepository.findOne({
-      where: {
-        id: expenseId,
-        userId,
-      },
-      relations,
-    });
-    this.commonService.checkEntityExistence(expense, 'Despesa');
-
-    return expense;
-  }
-
-  public async findBySubscription(
-    subscriptionId: number,
-  ): Promise<ExpenseEntity[]> {
-    const expenses = await this.expensesRepository.find({
-      where: {
-        subscription: { id: subscriptionId },
-      },
-      relations: {
-        invoice: {
-          creditCard: false,
-          expenses: {
-            bankAccount: false,
-            creditCard: false,
-            invoice: false,
-            subscription: false,
-          },
+    public async findById(
+        expenseId: number,
+        userId: number,
+        relations: FindOptionsRelations<Expense> = {
+            invoice: { creditCard: false, expenses: false },
+            customCategory: { expenses: false },
         },
-      },
-    });
-
-    return expenses;
-  }
-
-  public async findByFilters(
-    filters: FindExpensesFiltersDto,
-    ignoreCreditCard = false,
-  ): Promise<ExpenseEntity[]> {
-    const query = this.expensesRepository
-      .createQueryBuilder('e')
-      .leftJoinAndSelect('e.bankAccount', 'ba')
-      .leftJoinAndSelect('e.customCategory', 'cat')
-      .leftJoin('e.creditCard', 'cc');
-
-    if (filters.month) {
-      const [fromMonth, fromYear] = filters.month.split('-').map(Number);
-      const firstDayOfTheMonth = new Date(fromYear, fromMonth - 1);
-      const lastDayOfTheMonth = new Date(fromYear, fromMonth, 0);
-
-      query.where(
-        'e.expense_date between :firstDayOfTheMonth and :lastDayOfTheMonth',
-        {
-          firstDayOfTheMonth: firstDayOfTheMonth,
-          lastDayOfTheMonth: lastDayOfTheMonth,
-        },
-      );
-    }
-
-    if (filters.fromDate && filters.toDate) {
-      const [fromMonth, fromDay, fromYear] = filters.fromDate
-        .split('-')
-        .map(Number);
-      const [toMonth, toDay, toYear] = filters.toDate.split('-').map(Number);
-
-      query.where('e.expense_date between :fromDate and :toDate', {
-        fromDate: new Date(fromYear, fromMonth - 1, fromDay),
-        toDate: new Date(toYear, toMonth - 1, toDay),
-      });
-    }
-
-    if (filters.category) {
-      if (filters.category === ExpenseCategory.CUSTOM) {
-        query.andWhere('e.customCategory = :customCategory', {
-          customCategory: filters.customCategory,
+    ): Promise<Expense> {
+        const expense = await this.expensesRepository.findOne({
+            where: {
+                id: expenseId,
+                userId,
+            },
+            relations,
         });
-      }
+        this.commonService.checkEntityExistence(expense, 'Expense');
 
-      if (filters.category !== ExpenseCategory.CUSTOM) {
-        query.andWhere('e.category = :category', {
-          category: filters.category,
-        });
-      }
+        return expense;
     }
 
-    if (filters.name) {
-      query.andWhere('UPPER(e.name) like :name', {
-        name: `%${filters.name.toUpperCase()}%`,
-      });
-    }
+    public async findByFilters(
+        filters: FindExpensesFiltersDto,
+        ignoreCreditCard = false,
+    ): Promise<Expense[]> {
+        const query = this.expensesRepository
+            .createQueryBuilder('e')
+            .leftJoinAndSelect('e.bankAccount', 'ba')
+            .leftJoinAndSelect('e.customCategory', 'cat')
+            .leftJoin('e.creditCard', 'cc');
 
-    if (filters.creditCardId) {
-      query.andWhere('cc.id = :creditCardId', {
-        creditCardId: filters.creditCardId,
-      });
-    }
-
-    if (ignoreCreditCard) {
-      query.andWhere('e.creditCard is null');
-    }
-
-    if (filters.priceRange) {
-      const [min, max] = filters.priceRange;
-
-      query.andWhere('e.price between :min and :max', {
-        min,
-        max,
-      });
-    }
-
-    if (filters.status) {
-      query.andWhere('e.status = :status', { status: filters.status });
-    }
-
-    if (filters.type) {
-      query.andWhere('e.expense_type = :type', { type: filters.type });
-    }
-
-    return query
-      .andWhere('e.user_id = :userId', { userId: filters.userId })
-      .orderBy('e.expense_date', 'DESC')
-      .addOrderBy('cat.name', 'ASC')
-      .getMany();
-  }
-
-  public async create(
-    createExpenseDto: CreateExpenseDto,
-    userId: number,
-  ): Promise<ExpenseEntity | IGenericMessageResponse> {
-    const {
-      expenseType,
-      name,
-      price,
-      bankAccountId,
-      category,
-      customCategory: customCategoryId,
-      creditCardId,
-      installments,
-      expenseDate,
-      status,
-    } = createExpenseDto;
-
-    let bankAccount: BankAccountEntity = null;
-    if (bankAccountId) {
-      bankAccount = await this.bankAccountService.findById(
-        bankAccountId,
-        userId,
-      );
-    }
-
-    const customCategory = await this.categoryService.findById(
-      customCategoryId,
-      userId,
-      false,
-    );
-
-    const creditCard = creditCardId
-      ? await this.creditCardService.findById(creditCardId, userId)
-      : null;
-
-    if (bankAccount === null && creditCard && creditCard.bankAccount) {
-      bankAccount = await this.bankAccountService.findById(
-        creditCard.bankAccount.id,
-        userId,
-      );
-    }
-
-    let invoice: InvoiceEntity = null;
-    const invoices: InvoiceEntity[] = [];
-
-    if (creditCard) {
-      const today = new Date();
-
-      invoice = await this.invoiceService.findByMonthAndCreditCard(
-        creditCardId,
-        creditCard.closingDay,
-        new Date(expenseDate),
-      );
-
-      if (isNull(invoice) || isUndefined(invoice)) {
-        const { month, year } = getInvoiceMonth(
-          creditCard.closingDay,
-          new Date(expenseDate),
-        );
-
-        let invoiceStatus: InvoiceStatus = InvoiceStatus.PAID;
-
-        if (
-          (month > today.getMonth() && year === today.getFullYear()) ||
-          year > today.getFullYear()
-        ) {
-          invoiceStatus = InvoiceStatus.OPENED_FUTURE;
-        }
-
-        const { month: currentInvoiceMonth, year: currentInvoiceYear } =
-          getInvoiceMonth(creditCard.closingDay, new Date());
-        if (month === currentInvoiceMonth && year === currentInvoiceYear) {
-          invoiceStatus = InvoiceStatus.OPENED_CURRENT;
-        }
-
-        invoice = await this.invoiceService.create({
-          creditCard,
-          invoiceDate: new Date(expenseDate),
-          status: invoiceStatus,
-        });
-      }
-
-      invoices.push(invoice);
-
-      if (installments) {
-        for (let i = 1; i <= installments - 1; i++) {
-          const previousInvoice = invoices[i - 1];
-          const nextInvoiceDate = new Date(previousInvoice.closingDate);
-          nextInvoiceDate.setMonth(nextInvoiceDate.getMonth() + 1);
-
-          let installmentInvoice =
-            await this.invoiceService.findByMonthAndCreditCard(
-              creditCardId,
-              creditCard.closingDay,
-              new Date(previousInvoice.closingDate),
+        if (filters.month) {
+            const firstDayOfTheMonth = formatDate(
+                getFirstDayOfMonth(filters.month),
+                'YYYY-MM-DD',
+            );
+            const lastDayOfTheMonth = formatDate(
+                getLastDayOfMonth(filters.month),
+                'YYYY-MM-DD',
             );
 
-          if (isNull(installmentInvoice) || isUndefined(installmentInvoice)) {
-            const { month, year } = getInvoiceMonth(
-              creditCard.closingDay,
-              new Date(previousInvoice.closingDate),
+            query.where(
+                'e.expense_date between :firstDayOfTheMonth and :lastDayOfTheMonth',
+                {
+                    firstDayOfTheMonth: firstDayOfTheMonth,
+                    lastDayOfTheMonth: lastDayOfTheMonth,
+                },
             );
+        }
 
-            let invoiceStatus = InvoiceStatus.PAID;
-
-            if (
-              (month > today.getMonth() && year === today.getFullYear()) ||
-              year > today.getFullYear()
-            ) {
-              invoiceStatus = InvoiceStatus.OPENED_FUTURE;
-            }
-
-            const { month: currentInvoiceMonth, year: currentInvoiceYear } =
-              getInvoiceMonth(creditCard.closingDay, new Date());
-            if (month === currentInvoiceMonth && year === currentInvoiceYear) {
-              invoiceStatus = InvoiceStatus.OPENED_CURRENT;
-            }
-
-            installmentInvoice = await this.invoiceService.create({
-              creditCard,
-              invoiceDate: new Date(
-                nextInvoiceDate.getFullYear(),
-                nextInvoiceDate.getMonth(),
-              ),
-              status: invoiceStatus,
+        if (filters.fromDate && filters.toDate) {
+            query.where('e.expense_date between :fromDate and :toDate', {
+                fromDate: filters.fromDate,
+                toDate: filters.toDate,
             });
-          }
-
-          invoices.push(installmentInvoice);
         }
+
+        if (filters.category) {
+            if (filters.category === ExpenseCategory.CUSTOM) {
+                query.andWhere('e.customCategory = :customCategory', {
+                    customCategory: filters.customCategory,
+                });
+            }
+
+            if (filters.category !== ExpenseCategory.CUSTOM) {
+                query.andWhere('e.category = :category', {
+                    category: filters.category,
+                });
+            }
+        }
+
+        if (filters.name) {
+            query.andWhere('UPPER(e.name) like :name', {
+                name: `%${filters.name.toUpperCase()}%`,
+            });
+        }
+
+        if (filters.creditCardId) {
+            query.andWhere('cc.id = :creditCardId', {
+                creditCardId: filters.creditCardId,
+            });
+        }
+
+        if (ignoreCreditCard) {
+            query.andWhere('e.creditCard is null');
+        }
+
+        if (filters.priceRange) {
+            const [min, max] = filters.priceRange;
+
+            query.andWhere('e.price between :min and :max', {
+                min,
+                max,
+            });
+        }
+
+        if (filters.status) {
+            query.andWhere('e.status = :status', { status: filters.status });
+        }
+
+        if (filters.type) {
+            query.andWhere('e.expense_type = :type', { type: filters.type });
+        }
+
+        return query
+            .andWhere('e.user_id = :userId', { userId: filters.userId })
+            .orderBy('e.expense_date', 'DESC')
+            .addOrderBy('cat.name', 'ASC')
+            .getMany();
+    }
+
+    public async createInstallmentExpenses({
+        createExpenseDto,
+        userId,
+        creditCard,
+        invoices,
+        bankAccount,
+        customCategory,
+    }: {
+        createExpenseDto: CreateExpenseDto;
+        userId: number;
+        creditCard: CreditCard;
+        invoices: Invoice[];
+        bankAccount: BankAccount | null;
+        customCategory: Category | null;
+    }): Promise<void> {
+        const {
+            expenseType,
+            name,
+            price,
+            category,
+            customCategory: customCategoryId,
+            installments,
+            expenseDate,
+        } = createExpenseDto;
+
+        const installmentExpenses: Expense[] = [];
 
         for (let i = 1; i <= installments; i++) {
-          const nextMonthExpenseDate = new Date(expenseDate);
-          nextMonthExpenseDate.setMonth(
-            nextMonthExpenseDate.getMonth() + i - 1,
-          );
+            const nextMonthExpenseDate = new Date(expenseDate);
+            nextMonthExpenseDate.setMonth(
+                nextMonthExpenseDate.getMonth() + i - 1,
+            );
 
-          const newExpense = this.expensesRepository.create({
+            const installmentExpense = this.expensesRepository.create({
+                expenseType,
+                status:
+                    invoices[i - 1].status === InvoiceStatus.PAID
+                        ? ExpenseStatus.PAID
+                        : ExpenseStatus.PENDING,
+                name,
+                price,
+                bankAccount,
+                creditCard,
+                category,
+                customCategory: customCategoryId ? customCategory : null,
+                invoice: invoices[i - 1],
+                installmentNumber: i,
+                totalInstallments: installments,
+                userId,
+                expenseDate:
+                    i === 1 ? new Date(expenseDate) : nextMonthExpenseDate,
+            });
+
+            const savedExpense = await this.commonService.saveEntity(
+                this.expensesRepository,
+                installmentExpense,
+            );
+            installmentExpenses.push(savedExpense);
+        }
+
+        void this.redisPublisher.batchPublishToStream({
+            streamName: ASYNC_WORKER.REDIS_STREAMS.EXPENSE_CREATED,
+            messages: installmentExpenses.map((expense) =>
+                buildTransactionMessage({
+                    transaction: expense,
+                    userId: expense.userId,
+                    bankAccountId: expense.bankAccount?.id,
+                    invoiceId: expense.invoice?.id,
+                }),
+            ),
+        });
+    }
+
+    public async create(
+        createExpenseDto: CreateExpenseDto,
+        userId: number,
+    ): Promise<Expense | IGenericMessageResponse> {
+        const {
             expenseType,
-            status:
-              invoices[i - 1].status === InvoiceStatus.PAID
-                ? ExpenseStatus.PAID
-                : ExpenseStatus.PENDING,
+            name,
+            price,
+            bankAccountId,
+            category,
+            customCategory: customCategoryId,
+            creditCardId,
+            installments,
+            expenseDate,
+            status,
+        } = createExpenseDto;
+
+        const creditCard = creditCardId
+            ? await this.creditCardService.findById(creditCardId, userId)
+            : null;
+
+        let bankAccount: BankAccount | null = null;
+        if (bankAccountId || (creditCard && creditCard.bankAccount)) {
+            bankAccount = await this.bankAccountService.findById(
+                bankAccountId ?? creditCard.bankAccount.id,
+                userId,
+            );
+        }
+
+        const customCategory = await this.categoryService.findById(
+            customCategoryId,
+            userId,
+            false,
+        );
+
+        const invoices: Invoice[] = creditCard
+            ? await this.invoiceService.createInvoicesForExpense({
+                  creditCard,
+                  expenseDate,
+                  installments,
+              })
+            : [];
+
+        if (installments) {
+            await this.createInstallmentExpenses({
+                createExpenseDto,
+                userId,
+                creditCard,
+                invoices,
+                bankAccount,
+                customCategory,
+            });
+
+            return this.commonService.generateGenericMessageResponse(
+                `Successfully created expenses split in ${installments} installments.`,
+            );
+        }
+
+        const expense = this.expensesRepository.create({
+            expenseType,
+            status,
             name,
             price,
             bankAccount,
             creditCard,
             category,
             customCategory: customCategoryId ? customCategory : null,
-            invoice: invoices[i - 1],
-            installmentNumber: i,
-            totalInstallments: installments,
+            invoice: invoices[0],
             userId,
-            expenseDate: i === 1 ? new Date(expenseDate) : nextMonthExpenseDate,
-          });
+            expenseDate: new Date(expenseDate),
+        });
 
-          await this.commonService.saveEntity(
-            this.expensesRepository,
-            newExpense,
-          );
+        await this.commonService.saveEntity(this.expensesRepository, expense);
+
+        void this.redisPublisher.publishToStream({
+            streamName: ASYNC_WORKER.REDIS_STREAMS.EXPENSE_CREATED,
+            message: buildTransactionMessage({
+                transaction: expense,
+                userId: expense.userId,
+                bankAccountId: expense.bankAccount?.id,
+                invoiceId: expense.invoice?.id,
+            }),
+        });
+
+        return expense;
+    }
+
+    public async update(
+        expenseId: number,
+        userId: number,
+        updateDto: UpdateExpenseDto,
+    ): Promise<Expense> {
+        const expense = await this.findById(expenseId, userId);
+        const originalPrice = expense.price;
+
+        if (updateDto.category) {
+            expense.category = updateDto.category;
         }
 
+        if (updateDto.customCategory) {
+            expense.customCategory = await this.categoryService.findById(
+                updateDto.customCategory,
+                userId,
+            );
+        }
+
+        if (updateDto.price) {
+            expense.price = updateDto.price;
+        }
+
+        if (updateDto.name) {
+            expense.name = updateDto.name;
+        }
+
+        await this.commonService.saveEntity(this.expensesRepository, expense);
+
+        void this.redisPublisher.publishToStream({
+            streamName: ASYNC_WORKER.REDIS_STREAMS.EXPENSE_UPDATED,
+            message: buildTransactionMessage({
+                transaction: expense,
+                userId: expense.userId,
+                bankAccountId: expense.bankAccount?.id,
+                originalPrice,
+                invoiceId: expense.invoice?.id,
+            }),
+        });
+
+        return expense;
+    }
+
+    public async payExpense(
+        expenseId: number,
+    ): Promise<IGenericMessageResponse> {
+        await this.expensesRepository.save({
+            id: expenseId,
+            status: ExpenseStatus.PAID,
+        });
+
         return this.commonService.generateGenericMessageResponse(
-          `Despesa criada com sucesso em ${installments} parcelas.`,
+            `Expense paid!`,
         );
-      }
     }
 
-    const expense = this.expensesRepository.create({
-      expenseType,
-      status,
-      name,
-      price,
-      bankAccount,
-      creditCard,
-      category,
-      customCategory: customCategoryId ? customCategory : null,
-      invoice: invoices[0],
-      userId,
-      expenseDate: new Date(expenseDate),
-    });
+    public async delete(
+        id: number,
+        userId: number,
+    ): Promise<IGenericMessageResponse> {
+        const expense = await this.findById(id, userId);
 
-    await this.commonService.saveEntity(this.expensesRepository, expense);
+        await this.commonService.removeEntity(this.expensesRepository, expense);
 
-    return expense;
-  }
+        void this.redisPublisher.publishToStream({
+            streamName: ASYNC_WORKER.REDIS_STREAMS.EXPENSE_DELETED,
+            message: buildTransactionMessage({
+                transaction: expense,
+                userId: expense.userId,
+                bankAccountId: expense.bankAccount?.id,
+                invoiceId: expense.invoice?.id,
+            }),
+        });
 
-  public async update(
-    expenseId: number,
-    userId: number,
-    updateDto: UpdateExpenseDto,
-  ): Promise<ExpenseEntity> {
-    const expense = await this.findById(expenseId, userId);
-
-    if (updateDto.category) {
-      expense.category = updateDto.category;
+        return this.commonService.generateGenericMessageResponse(
+            'Successfully deleted expense!',
+        );
     }
-
-    if (updateDto.customCategory) {
-      const customCategory = await this.categoryService.findById(
-        updateDto.customCategory,
-        userId,
-      );
-      expense.customCategory = customCategory;
-    }
-
-    if (updateDto.price) {
-      expense.price = updateDto.price;
-    }
-
-    if (updateDto.name) {
-      expense.name = updateDto.name;
-    }
-
-    await this.commonService.saveEntity(this.expensesRepository, expense);
-
-    return expense;
-  }
-
-  public async payExpense(expenseId: number): Promise<IGenericMessageResponse> {
-    await this.expensesRepository.save({
-      id: expenseId,
-      status: ExpenseStatus.PAID,
-    });
-
-    return this.commonService.generateGenericMessageResponse(`Despesa paga!`);
-  }
-
-  public async delete(
-    id: number,
-    userId: number,
-  ): Promise<IGenericMessageResponse> {
-    const expense = await this.findById(id, userId);
-
-    await this.commonService.removeEntity(this.expensesRepository, expense);
-
-    return this.commonService.generateGenericMessageResponse(
-      'Despesa deletada com sucesso!',
-    );
-  }
 }

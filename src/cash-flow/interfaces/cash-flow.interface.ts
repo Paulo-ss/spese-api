@@ -1,33 +1,31 @@
-import { CalendarEventType } from 'src/analytics/enums/calendar-event-type.enum';
+import { TransactionType } from 'src/cash-flow/interfaces/transaction-type';
+import { IVersionedUserEntityBase } from '../../common/interfaces/versioned-user-entity-base.interface';
 
-export interface ICashFlowDaily {
-  id: number;
-  openingBalance: number;
-  closingBalance: number;
-  date: Date;
-  userId: number;
-  createdAt: Date;
-  updatedAt: Date;
+export interface ICashFlowDaily extends IVersionedUserEntityBase {
+    id: number;
+    openingBalance: number;
+    closingBalance: number;
+    date: Date;
 }
 
-export interface ICashFlowTransaction {
-  id: number;
-  type: CalendarEventType;
-  value: number;
-  title: string;
-  start: Date;
-  end: Date;
+export interface ITransaction {
+    entityId: number;
+    type: TransactionType;
+    price: number;
+    title: string;
+    start: Date | string;
+    end: Date | string;
 }
 
 export type TDailyCashFlow = {
-  [key: string]: {
-    transactions: ICashFlowTransaction[];
-    openingBalance?: number;
-    closingBalance?: number;
-  };
+    [key: string]: {
+        transactions: ITransaction[];
+        openingBalance?: number;
+        closingBalance?: number;
+    };
 };
 
 export interface ICashFlowResponse {
-  currentAccountsBalance?: number;
-  dailyCashFlow: TDailyCashFlow;
+    currentAccountsBalance?: number;
+    dailyCashFlow: TDailyCashFlow;
 }

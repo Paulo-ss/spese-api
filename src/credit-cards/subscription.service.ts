@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { SubscriptionEntity } from './entities/subscription.entity';
+import { Subscription } from './entities/subscription.entity';
 import { Repository } from 'typeorm';
 import { CommonService } from 'src/common/common.service';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
@@ -11,13 +11,13 @@ import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-r
 @Injectable()
 export class SubscriptionService {
   constructor(
-    @InjectRepository(SubscriptionEntity)
-    private readonly subscriptionRepository: Repository<SubscriptionEntity>,
+    @InjectRepository(Subscription)
+    private readonly subscriptionRepository: Repository<Subscription>,
     @Inject() private readonly creditCardService: CreditCardsService,
     private readonly commonService: CommonService,
   ) {}
 
-  public async findById(id: number): Promise<SubscriptionEntity> {
+  public async findById(id: number): Promise<Subscription> {
     const subscription = await this.subscriptionRepository.findOne({
       where: { id },
       relations: {
@@ -35,7 +35,7 @@ export class SubscriptionService {
     return subscription;
   }
 
-  public async findByUser(userId: number): Promise<SubscriptionEntity[]> {
+  public async findByUser(userId: number): Promise<Subscription[]> {
     return await this.subscriptionRepository.find({
       where: { userId },
       relations: { creditCard: true },
@@ -44,7 +44,7 @@ export class SubscriptionService {
 
   public async findByCreditCard(
     creditCardId: number,
-  ): Promise<SubscriptionEntity[]> {
+  ): Promise<Subscription[]> {
     return await this.subscriptionRepository.find({
       where: { creditCard: { id: creditCardId } },
       relations: { creditCard: true },
@@ -54,7 +54,7 @@ export class SubscriptionService {
   public async create(
     subscription: CreateSubscriptionDto,
     userId: number,
-  ): Promise<SubscriptionEntity> {
+  ): Promise<Subscription> {
     const creditCard = await this.creditCardService.findById(
       subscription.creditCardId,
       userId,
@@ -78,7 +78,7 @@ export class SubscriptionService {
     id: number,
     dto: UpdateSubscriptionDto,
     userId: number,
-  ): Promise<SubscriptionEntity> {
+  ): Promise<Subscription> {
     const subscription = await this.findById(id);
 
     const creditCard = dto.creditCardId

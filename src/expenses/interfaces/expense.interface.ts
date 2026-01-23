@@ -6,22 +6,21 @@ import { ExpenseCategory } from '../enums/expense-category.enum';
 import { ISubscription } from 'src/credit-cards/interfaces/subscription.interface';
 import { IInvoice } from 'src/credit-cards/interfaces/invoice.interface';
 import { ICategory } from 'src/category/interfaces/category.interface';
+import { IVersionedUserEntityBase } from '../../common/interfaces/versioned-user-entity-base.interface';
 
-export interface IExpense {
-  id: number;
-  userId: number;
-  expenseType: ExpenseType;
-  name: string;
-  price: number;
-  status: ExpenseStatus;
-  expenseDate: Date;
-  updatedAt: Date;
-  category?: ExpenseCategory;
-  customCategory?: ICategory;
-  bankAccount?: IBankAccount;
-  creditCard?: ICreditCard;
-  invoice?: IInvoice;
-  subscription?: ISubscription;
-  installmentNumber?: number;
-  totalInstallments?: number;
+export interface IExpense extends IVersionedUserEntityBase {
+    id: number;
+    expenseType: ExpenseType;
+    name: string;
+    price: number;
+    status: ExpenseStatus;
+    expenseDate: Date;
+    category?: ExpenseCategory;
+    customCategory?: ICategory;
+    bankAccount?: IBankAccount;
+    creditCard?: ICreditCard;
+    invoice?: IInvoice;
+    subscription?: ISubscription;
+    installmentNumber?: number;
+    totalInstallments?: number;
 }

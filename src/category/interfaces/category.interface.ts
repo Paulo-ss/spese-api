@@ -1,11 +1,9 @@
 import { IExpense } from 'src/expenses/interfaces/expense.interface';
+import { IVersionedUserEntityBase } from '../../common/interfaces/versioned-user-entity-base.interface';
 
-export interface ICategory {
-  id: number;
-  name: string;
-  color: string;
-  userId: number;
-  expenses?: IExpense[];
-  createdAt: Date;
-  updatedAt: Date;
+export interface ICategory extends IVersionedUserEntityBase {
+    id: number;
+    name: string;
+    color: string;
+    expenses?: IExpense[];
 }

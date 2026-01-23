@@ -1,14 +1,14 @@
-import { IsDate, IsEnum, IsInstance } from 'class-validator';
-import { CreditCardEntity } from '../entities/credit-card.entity';
-import { InvoiceStatus } from '../enums/invoice-status.enum';
+import { IsDate, IsInstance, IsOptional } from 'class-validator';
+import { CreditCard } from '../entities/credit-card.entity';
 
 export class CreateInvoiceDto {
-  @IsInstance(CreditCardEntity)
-  public creditCard: CreditCardEntity;
+    @IsInstance(CreditCard)
+    public creditCard: CreditCard;
 
-  @IsEnum(InvoiceStatus)
-  public status: InvoiceStatus;
+    @IsDate()
+    public invoiceDate: Date;
 
-  @IsDate()
-  public invoiceDate: Date;
+    @IsOptional()
+    @IsDate()
+    public dateToComputeStatus?: Date;
 }

@@ -1,60 +1,83 @@
 import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  ManyToOne,
-  OneToMany,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
+    Column,
+    Entity,
+    JoinColumn,
+    ManyToOne,
+    OneToMany,
+    PrimaryGeneratedColumn,
 } from 'typeorm';
 import { IInvoice } from '../interfaces/invoice.interface';
-import { CreditCardEntity } from './credit-card.entity';
-import { ExpenseEntity } from 'src/expenses/entities/expense.entity';
+import { CreditCard } from './credit-card.entity';
+import { Expense } from 'src/expenses/entities/expense.entity';
 import { InvoiceStatus } from '../enums/invoice-status.enum';
-import { ColumnNumericTransformer } from 'src/common/transformers/column-numeric-transformer.transformer';
+import { NumericColumnTransformer } from 'src/common/transformers/column-numeric-transformer.transformer';
+import { ITransaction } from 'src/cash-flow/interfaces/cash-flow.interface';
+import { TransactionType } from 'src/cash-flow/interfaces/transaction-type';
+import { VersionedUserEntityBase } from '../../common/entities/versioned-user-base.entity';
 
 @Entity({ name: 'invoices' })
-export class InvoiceEntity implements IInvoice {
-  @PrimaryGeneratedColumn()
-  public id: number;
+export class Invoice
+    extends VersionedUserEntityBase
+    implements IInvoice, ITransaction
+{
+    @PrimaryGeneratedColumn()
+    public id: number;
 
-  @Column('decimal', {
-    name: 'current_price',
-    precision: 10,
-    scale: 2,
-    transformer: new ColumnNumericTransformer(),
-  })
-  public currentPrice: number;
+    @Column('decimal', {
+        name: 'current_price',
+        precision: 10,
+        scale: 2,
+        transformer: new NumericColumnTransformer(),
+    })
+    public currentPrice: number;
 
-  @Column('decimal', {
-    name: 'total_price',
-    precision: 10,
-    scale: 2,
-    transformer: new ColumnNumericTransformer(),
-  })
-  public totalPrice: number;
+    @Column('decimal', {
+        name: 'total_price',
+        precision: 10,
+        scale: 2,
+        transformer: new NumericColumnTransformer(),
+    })
+    public totalPrice: number;
 
-  @Column('date', { name: 'closing_date' })
-  public closingDate: Date;
+    @Column('date', {
+        name: 'closing_date',
+    })
+    public closingDate: Date;
 
-  @Column('date', { name: 'due_date' })
-  public dueDate: Date;
+    @Column('date', { name: 'due_date' })
+    public dueDate: Date;
 
-  @ManyToOne(() => CreditCardEntity, (creditCard) => creditCard.invoices)
-  public creditCard: CreditCardEntity;
+    @ManyToOne(() => CreditCard, (creditCard) => creditCard.invoices)
+    @JoinColumn({ name: 'credit_card_id' })
+    public creditCard: CreditCard;
 
-  @OneToMany(() => ExpenseEntity, (expense) => expense.invoice)
-  public expenses: ExpenseEntity[];
+    @OneToMany(() => Expense, (expense) => expense.invoice)
+    public expenses: Expense[];
 
-  @Column('enum', { name: 'status', enum: InvoiceStatus })
-  public status: InvoiceStatus;
+    @Column('enum', { name: 'status', enum: InvoiceStatus })
+    public status: InvoiceStatus;
 
-  @CreateDateColumn({ name: 'created_at' })
-  public createdAt: Date;
+    get entityId(): number {
+        return this.id;
+    }
 
-  @UpdateDateColumn({ name: 'updated_at' })
-  public updatedAt: Date;
+    get type(): TransactionType {
+        return TransactionType.INVOICE;
+    }
 
-  @Column({ name: 'user_id' })
-  public userId: number;
+    get price(): number {
+        return this.currentPrice;
+    }
+
+    get title(): string {
+        return `Invoice ${this.dueDate} ${this.creditCard.lastFourDigits}`;
+    }
+
+    get start(): Date {
+        return this.dueDate;
+    }
+
+    get end(): Date {
+        return this.dueDate;
+    }
 }

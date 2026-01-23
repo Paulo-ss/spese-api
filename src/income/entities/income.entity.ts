@@ -1,39 +1,67 @@
 import {
-  Column,
-  Entity,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
+    Column,
+    Entity,
+    JoinColumn,
+    ManyToOne,
+    PrimaryGeneratedColumn,
 } from 'typeorm';
 import { IIncome } from '../interfaces/income.interface';
-import { BankAccountEntity } from 'src/bank-accounts/entities/bank.entity';
+import { BankAccount } from 'src/bank-accounts/entities/bank.entity';
 import { IBankAccount } from 'src/bank-accounts/interfaces/bank-account.interface';
-import { WageEntity } from './wage.entity';
-import { IWage } from '../interfaces/wage.interface';
+import { ITransaction } from 'src/cash-flow/interfaces/cash-flow.interface';
+import { TransactionType } from 'src/cash-flow/interfaces/transaction-type';
+import { NumericColumnTransformer } from '../../common/transformers/column-numeric-transformer.transformer';
+import { VersionedUserEntityBase } from '../../common/entities/versioned-user-base.entity';
 
 @Entity({ name: 'incomes' })
-export class IncomeEntity implements IIncome {
-  @PrimaryGeneratedColumn()
-  public id: number;
+export class Income
+    extends VersionedUserEntityBase
+    implements IIncome, ITransaction
+{
+    @PrimaryGeneratedColumn()
+    public id: number;
 
-  @Column({ name: 'name' })
-  public name: string;
+    @Column({ name: 'name' })
+    public name: string;
 
-  @Column('decimal', { name: 'value', precision: 10, scale: 2 })
-  public value: number;
+    @Column('decimal', {
+        name: 'value',
+        precision: 10,
+        scale: 2,
+        transformer: new NumericColumnTransformer(),
+    })
+    public value: number;
 
-  @ManyToOne(() => BankAccountEntity, { nullable: true })
-  public bankAccount?: IBankAccount;
+    @ManyToOne(() => BankAccount, { nullable: true })
+    @JoinColumn({ name: 'bank_account_id' })
+    public bankAccount?: IBankAccount;
 
-  @ManyToOne(() => WageEntity, { nullable: true })
-  public wage?: IWage;
+    @Column('date', {
+        name: 'income_date',
+    })
+    public incomeDate: Date;
 
-  @Column({ name: 'user_id' })
-  public userId: number;
+    get entityId(): number {
+        return this.id;
+    }
 
-  @Column('date', { name: 'income_month' })
-  public incomeMonth: Date;
+    get type(): TransactionType {
+        return TransactionType.INCOME;
+    }
 
-  @UpdateDateColumn({ name: 'updated_at' })
-  public updatedAt: Date;
+    get price(): number {
+        return this.value;
+    }
+
+    get title(): string {
+        return this.name;
+    }
+
+    get start(): Date {
+        return this.incomeDate;
+    }
+
+    get end(): Date {
+        return this.incomeDate;
+    }
 }
