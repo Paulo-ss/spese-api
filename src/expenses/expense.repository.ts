@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { BaseRepository } from '../common/repositories/base.repository';
 import { Expense } from './entities/expense.entity';
-import { TransactionHost } from '@nestjs-cls/transactional';
+import {
+    InjectTransactionHost,
+    TransactionHost,
+} from '@nestjs-cls/transactional';
 import { TransactionalAdapterTypeOrm } from '@nestjs-cls/transactional-adapter-typeorm';
 import { DeepPartial, FindOptionsRelations } from 'typeorm';
 import { FindExpensesFiltersDto } from './dto/find-expenses-filters.dto';
@@ -15,7 +18,10 @@ import { IExpense } from './interfaces/expense.interface';
 
 @Injectable()
 export class ExpenseRepository extends BaseRepository<Expense> {
-    constructor(txHost: TransactionHost<TransactionalAdapterTypeOrm>) {
+    constructor(
+        @InjectTransactionHost('default')
+        txHost: TransactionHost<TransactionalAdapterTypeOrm>,
+    ) {
         super(txHost, Expense);
     }
 

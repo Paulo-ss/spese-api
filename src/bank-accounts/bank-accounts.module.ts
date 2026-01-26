@@ -7,12 +7,12 @@ import { IncomeModule } from 'src/income/income.module';
 import { BankAccountRepository } from './bank-account.repository';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([BankAccount]),
-    forwardRef(() => IncomeModule),
-  ],
-  controllers: [BankAccountsController],
-  providers: [BankAccountsService, BankAccountRepository],
-  exports: [BankAccountsService],
+    imports: [
+        TypeOrmModule.forFeature([BankAccount]),
+        forwardRef(() => IncomeModule),
+    ],
+    controllers: [BankAccountsController],
+    providers: [BankAccountsService, BankAccountRepository],
+    exports: [BankAccountsService],
 })
 export class BankAccountsModule {}

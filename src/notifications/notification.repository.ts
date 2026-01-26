@@ -1,14 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { BaseRepository } from '../common/repositories/base.repository';
 import { Notification } from './entities/notification.entity';
-import { TransactionHost } from '@nestjs-cls/transactional';
+import {
+    InjectTransactionHost,
+    TransactionHost,
+} from '@nestjs-cls/transactional';
 import { TransactionalAdapterTypeOrm } from '@nestjs-cls/transactional-adapter-typeorm';
 import { DeepPartial } from 'typeorm';
 import { formatDate, getToday } from '../common/utils/dates.utils';
 
 @Injectable()
 export class NotificationRepository extends BaseRepository<Notification> {
-    constructor(txHost: TransactionHost<TransactionalAdapterTypeOrm>) {
+    constructor(
+        @InjectTransactionHost('default')
+        txHost: TransactionHost<TransactionalAdapterTypeOrm>,
+    ) {
         super(txHost, Notification);
     }
 

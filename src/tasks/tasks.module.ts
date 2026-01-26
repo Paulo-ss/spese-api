@@ -7,14 +7,14 @@ import { IncomeModule } from 'src/income/income.module';
 import { BankAccountsModule } from 'src/bank-accounts/bank-accounts.module';
 
 @Module({
-  imports: [
-    NotificationsModule,
-    CreditCardsModule,
-    AnalyticsModule,
-    IncomeModule,
-    BankAccountsModule,
-  ],
-  providers: [TasksService],
-  exports: [TasksService],
+    imports: [
+        NotificationsModule,
+        CreditCardsModule,
+        AnalyticsModule,
+        IncomeModule,
+        BankAccountsModule,
+    ],
+    providers: [TasksService],
+    exports: [TasksService],
 })
 export class TasksModule {}

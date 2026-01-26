@@ -1,4 +1,4 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UsersModule } from 'src/users/users.module';
@@ -11,22 +11,22 @@ import { MailerModule } from 'src/mailer/mailer.module';
 import { BlacklistedTokenRepository } from './blacklisted-token.repository';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([BlacklistedToken]),
-    ClientsModule.register([
-      {
-        name: 'COMMUNICATION',
-        transport: Transport.TCP,
-        options: { port: 8081, host: 'communication' },
-      },
-    ]),
-    UsersModule,
-    JwtModule,
-    MailerModule,
-    forwardRef(() => ExternalOauthModule),
-  ],
-  controllers: [AuthController],
-  providers: [AuthService, BlacklistedTokenRepository],
-  exports: [AuthService],
+    imports: [
+        TypeOrmModule.forFeature([BlacklistedToken]),
+        ClientsModule.register([
+            {
+                name: 'COMMUNICATION',
+                transport: Transport.TCP,
+                options: { port: 8081, host: 'communication' },
+            },
+        ]),
+        UsersModule,
+        JwtModule,
+        MailerModule,
+        forwardRef(() => ExternalOauthModule),
+    ],
+    controllers: [AuthController],
+    providers: [AuthService, BlacklistedTokenRepository],
+    exports: [AuthService],
 })
 export class AuthModule {}

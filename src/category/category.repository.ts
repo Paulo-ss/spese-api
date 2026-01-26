@@ -1,13 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { BaseRepository } from '../common/repositories/base.repository';
 import { Category } from './entities/category.entity';
-import { TransactionHost } from '@nestjs-cls/transactional';
+import {
+    InjectTransactionHost,
+    TransactionHost,
+} from '@nestjs-cls/transactional';
 import { TransactionalAdapterTypeOrm } from '@nestjs-cls/transactional-adapter-typeorm';
 import { DeepPartial } from 'typeorm';
 
 @Injectable()
 export class CategoryRepository extends BaseRepository<Category> {
-    constructor(txHost: TransactionHost<TransactionalAdapterTypeOrm>) {
+    constructor(
+        @InjectTransactionHost('default')
+        txHost: TransactionHost<TransactionalAdapterTypeOrm>,
+    ) {
         super(txHost, Category);
     }
 
@@ -22,7 +28,9 @@ export class CategoryRepository extends BaseRepository<Category> {
     }
 
     public async upsert(category: DeepPartial<Category>): Promise<Category>;
-    public async upsert(categories: DeepPartial<Category>[]): Promise<Category[]>;
+    public async upsert(
+        categories: DeepPartial<Category>[],
+    ): Promise<Category[]>;
     public async upsert(
         categories: DeepPartial<Category> | DeepPartial<Category>[],
     ): Promise<Category | Category[]> {

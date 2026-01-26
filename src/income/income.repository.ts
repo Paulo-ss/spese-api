@@ -1,14 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { BaseRepository } from '../common/repositories/base.repository';
 import { Income } from './entities/income.entity';
-import { TransactionHost } from '@nestjs-cls/transactional';
+import {
+    InjectTransactionHost,
+    TransactionHost,
+} from '@nestjs-cls/transactional';
 import { TransactionalAdapterTypeOrm } from '@nestjs-cls/transactional-adapter-typeorm';
 import { DeepPartial } from 'typeorm';
 import { FilterIncomesDto } from './dto/filter-incomes.dto';
 
 @Injectable()
 export class IncomeRepository extends BaseRepository<Income> {
-    constructor(txHost: TransactionHost<TransactionalAdapterTypeOrm>) {
+    constructor(
+        @InjectTransactionHost('default')
+        txHost: TransactionHost<TransactionalAdapterTypeOrm>,
+    ) {
         super(txHost, Income);
     }
 

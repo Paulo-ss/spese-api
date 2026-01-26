@@ -46,11 +46,25 @@ import { DataSource } from 'typeorm';
 
 @Module({
     imports: [
+        UsersModule,
+        AuthModule,
+        BankAccountsModule,
+        IncomeModule,
+        CreditCardsModule,
+        ExpensesModule,
+        AnalyticsModule,
+        CommonModule,
+        NotificationsModule,
+        CategoryModule,
+        TasksModule,
+        CashFlowModule,
+        AsyncWorkerModule,
         ConfigModule.forRoot({
             isGlobal: true,
             validationSchema,
             load: [config],
         }),
+        ScheduleModule.forRoot(),
         TypeOrmModule.forRoot({
             type: 'postgres',
             host: process.env.POSTGRES_HOST,
@@ -76,7 +90,6 @@ import { DataSource } from 'typeorm';
             useUTC: true,
             logging: true,
         }),
-        ScheduleModule.forRoot(),
         ClsModule.forRoot({
             global: true,
             middleware: {
@@ -85,25 +98,13 @@ import { DataSource } from 'typeorm';
             plugins: [
                 new ClsPluginTransactional({
                     connectionName: 'default',
+                    imports: [TypeOrmModule],
                     adapter: new TransactionalAdapterTypeOrm({
                         dataSourceToken: DataSource,
                     }),
                 }),
             ],
         }),
-        UsersModule,
-        AuthModule,
-        BankAccountsModule,
-        IncomeModule,
-        CreditCardsModule,
-        ExpensesModule,
-        AnalyticsModule,
-        CommonModule,
-        NotificationsModule,
-        CategoryModule,
-        TasksModule,
-        CashFlowModule,
-        AsyncWorkerModule,
     ],
     controllers: [
         AppController,

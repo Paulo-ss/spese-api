@@ -1,13 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { BaseRepository } from '../common/repositories/base.repository';
 import { User } from './entities/user.entity';
-import { TransactionHost } from '@nestjs-cls/transactional';
+import {
+    TransactionHost,
+    InjectTransactionHost,
+} from '@nestjs-cls/transactional';
 import { TransactionalAdapterTypeOrm } from '@nestjs-cls/transactional-adapter-typeorm';
 import { DeepPartial } from 'typeorm';
 
 @Injectable()
 export class UserRepository extends BaseRepository<User> {
-    constructor(txHost: TransactionHost<TransactionalAdapterTypeOrm>) {
+    constructor(
+        @InjectTransactionHost('default')
+        txHost: TransactionHost<TransactionalAdapterTypeOrm>,
+    ) {
         super(txHost, User);
     }
 
