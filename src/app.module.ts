@@ -68,7 +68,6 @@ import { DataSource } from 'typeorm';
                 Report,
                 User,
                 BlacklistedToken,
-                Report,
                 Notification,
                 Category,
                 CashFlowByDay,

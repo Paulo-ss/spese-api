@@ -8,6 +8,7 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ExternalOauthModule } from '../external-oauth/external-oauth.module';
 import { BlacklistedToken } from './entities/blacklisted-token.entity';
 import { MailerModule } from 'src/mailer/mailer.module';
+import { BlacklistedTokenRepository } from './blacklisted-token.repository';
 
 @Module({
   imports: [
@@ -25,7 +26,7 @@ import { MailerModule } from 'src/mailer/mailer.module';
     forwardRef(() => ExternalOauthModule),
   ],
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [AuthService, BlacklistedTokenRepository],
   exports: [AuthService],
 })
 export class AuthModule {}

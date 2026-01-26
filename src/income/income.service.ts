@@ -1,7 +1,5 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Income } from './entities/income.entity';
-import { Repository } from 'typeorm';
 import { CommonService } from 'src/common/common.service';
 import { CreateIncomeDto } from './dto/create-income.dto';
 import { UpdateIncomeDto } from './dto/update-income.dto';
@@ -14,22 +12,22 @@ import {
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
 import { FilterIncomesDto } from './dto/filter-incomes.dto';
 import { BankAccountsService } from 'src/bank-accounts/bank-accounts.service';
+import { RedisPublisher } from '../async-worker/publisher/redis.publisher';
+import { ITransactionMessage } from '../async-worker/types/messages';
+import { ASYNC_WORKER } from '../common/constants/constants';
+import { buildTransactionMessage } from '../async-worker/utils/messages.builders';
+import { IncomeRepository } from './income.repository';
+import dayjs from 'dayjs';
 import {
     formatDate,
     getFirstDayOfMonth,
     getLastDayOfMonth,
 } from '../common/utils/dates.utils';
-import { RedisPublisher } from '../async-worker/publisher/redis.publisher';
-import { ITransactionMessage } from '../async-worker/types/messages';
-import { ASYNC_WORKER } from '../common/constants/constants';
-import { buildTransactionMessage } from '../async-worker/utils/messages.builders';
-import dayjs from 'dayjs';
 
 @Injectable()
 export class IncomeService {
     constructor(
-        @InjectRepository(Income)
-        private readonly incomesRepository: Repository<Income>,
+        private readonly incomeRepository: IncomeRepository,
         private readonly commonService: CommonService,
         @Inject(forwardRef(() => BankAccountsService))
         private readonly bankAccountService: BankAccountsService,
@@ -37,30 +35,14 @@ export class IncomeService {
     ) {}
 
     public async findById(incomeId: number, userId: number): Promise<Income> {
-        const income = await this.incomesRepository.findOne({
-            where: {
-                id: incomeId,
-                userId,
-            },
-            relations: {
-                bankAccount: { expenses: false },
-            },
-        });
+        const income = await this.incomeRepository.findById(incomeId, userId);
         this.commonService.checkEntityExistence(income, 'Income');
 
         return income;
     }
 
     public async findByFilters(filters: FilterIncomesDto): Promise<Income[]> {
-        return await this.incomesRepository
-            .createQueryBuilder('in')
-            .where('in.income_month between :from and :to', {
-                from: filters.fromDate,
-                to: filters.toDate,
-            })
-            .andWhere('in.user_id = :userId', { userId: filters.userId })
-            .orderBy('in.income_month', 'DESC')
-            .getMany();
+        return await this.incomeRepository.findByFilters(filters);
     }
 
     public async getUsersMonthTotalIncome(
@@ -76,14 +58,11 @@ export class IncomeService {
             'YYYY-MM-DD',
         );
 
-        const incomes = await this.incomesRepository
-            .createQueryBuilder('in')
-            .where('in.income_month between :from and :to', {
-                from: firstDayOfTheMonth,
-                to: lastDayOfTheMonth,
-            })
-            .andWhere('in.user_id = :userId', { userId })
-            .getMany();
+        const incomes = await this.findByFilters({
+            fromDate: firstDayOfTheMonth,
+            toDate: lastDayOfTheMonth,
+            userId,
+        });
 
         if (isNullOrUndefined(incomes) || isEmpty(incomes)) {
             return 0;
@@ -98,7 +77,7 @@ export class IncomeService {
         createIncome: CreateIncomeDto,
         userId: number,
     ): Promise<Income> {
-        const newIncome = this.incomesRepository.create({
+        const newIncome = await this.incomeRepository.upsert({
             name: createIncome.name,
             value: createIncome.value,
             incomeDate: dayjs(createIncome.incomeDate).toDate(),
@@ -111,8 +90,6 @@ export class IncomeService {
                 : undefined,
             userId,
         });
-
-        await this.commonService.saveEntity(this.incomesRepository, newIncome);
 
         void this.redisPublisher.publishToStream({
             streamName: ASYNC_WORKER.REDIS_STREAMS.INCOME_CREATED,
@@ -141,10 +118,7 @@ export class IncomeService {
             income.value = value;
         }
 
-        const updatedIncome = await this.commonService.saveEntity(
-            this.incomesRepository,
-            income,
-        );
+        const updatedIncome = await this.incomeRepository.upsert(income);
 
         void this.redisPublisher.publishToStream({
             streamName: ASYNC_WORKER.REDIS_STREAMS.INCOME_UPDATED,
@@ -164,7 +138,7 @@ export class IncomeService {
     ): Promise<IGenericMessageResponse> {
         const income = await this.findById(incomeId, userId);
 
-        await this.commonService.removeEntity(this.incomesRepository, income);
+        await this.incomeRepository.delete(income);
 
         void this.redisPublisher.publishToStream({
             streamName: ASYNC_WORKER.REDIS_STREAMS.INCOME_DELETED,

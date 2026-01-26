@@ -23,7 +23,7 @@ import { Category } from '../category/entities/category.entity';
 import { ExpenseRepository } from './expense.repository';
 import { IExpense } from './interfaces/expense.interface';
 import { Transactional } from '@nestjs-cls/transactional';
-import dayjs from 'dayjs';
+import * as dayjs from 'dayjs';
 
 @Injectable()
 export class ExpensesService {

@@ -21,6 +21,8 @@ import {
 import { IncomeService } from 'src/income/income.service';
 import { InvoiceService } from 'src/credit-cards/invoice.service';
 import { ITransactionMessage } from '../async-worker/types/messages';
+import { CashFlowByDayRepository } from './cash-flow-by-day.repository';
+import { Transactional } from '@nestjs-cls/transactional';
 import * as dayjs from 'dayjs';
 
 @Injectable()
@@ -28,28 +30,13 @@ export class CashFlowService {
     private readonly logger: Logger = new Logger(CashFlowService.name);
 
     constructor(
+        private readonly cashFlowByDayRepository: CashFlowByDayRepository,
         private readonly bankAccountService: BankAccountsService,
         private readonly commonService: CommonService,
         private readonly expensesService: ExpensesService,
         private readonly incomeService: IncomeService,
         private readonly invoiceService: InvoiceService,
     ) {}
-
-    public async findAllCashFlowDayByDate(
-        date: Date | FindOperator<Date>,
-        userId: number,
-    ): Promise<CashFlowByDay[]> {
-        return await this.commonService.confirmTransaction(
-            async (entityManager) => {
-                return await entityManager.find(CashFlowByDay, {
-                    where: {
-                        date,
-                        userId,
-                    },
-                });
-            },
-        );
-    }
 
     public async findCashFlowDayByDate({
         date,
@@ -60,17 +47,11 @@ export class CashFlowService {
         userId: number;
         order?: FindOptionsOrder<CashFlowByDay>;
     }): Promise<CashFlowByDay | null> {
-        return await this.commonService.confirmTransaction(
-            async (entityManager) => {
-                return await entityManager.findOne(CashFlowByDay, {
-                    where: {
-                        date,
-                        userId,
-                    },
-                    order,
-                });
-            },
-        );
+        return await this.cashFlowByDayRepository.findOneByDate({
+            date,
+            userId,
+            order,
+        });
     }
 
     public async getMonthCashFlow({
@@ -195,18 +176,12 @@ export class CashFlowService {
             ? nextCashFlow.openingBalance
             : previousBalance;
 
-        return await this.commonService.confirmTransaction(
-            async (entityManager) => {
-                const newCashFlow = entityManager.create(CashFlowByDay, {
-                    openingBalance: previousBalance,
-                    closingBalance: nextBalance,
-                    userId,
-                    date,
-                });
-
-                return await entityManager.save(CashFlowByDay, newCashFlow);
-            },
-        );
+        return await this.cashFlowByDayRepository.upsert({
+            openingBalance: previousBalance,
+            closingBalance: nextBalance,
+            userId,
+            date,
+        });
     }
 
     public async updateFutureDaysBalanceFromDate({
@@ -218,10 +193,8 @@ export class CashFlowService {
         price: number;
         userId: number;
     }): Promise<CashFlowByDay[]> {
-        const cashFlowDays = await this.findAllCashFlowDayByDate(
-            MoreThan(date),
-            userId,
-        );
+        const cashFlowDays =
+            await this.cashFlowByDayRepository.findAllAfterDate(date, userId);
 
         cashFlowDays.forEach((cashFlowDay) => {
             cashFlowDay.openingBalance += price;
@@ -231,6 +204,7 @@ export class CashFlowService {
         return cashFlowDays;
     }
 
+    @Transactional()
     public async updateCashFlowDayForTransactionType({
         cashFlow,
         transactionType,
@@ -261,14 +235,13 @@ export class CashFlowService {
                 price: transformedPrice,
             });
 
-        await this.commonService.confirmTransaction(async (entityManager) => {
-            await entityManager.save(CashFlowByDay, [
-                cashFlow,
-                ...updatedFutureCashFlowDays,
-            ]);
-        });
+        await this.cashFlowByDayRepository.upsert([
+            cashFlow,
+            ...updatedFutureCashFlowDays,
+        ]);
     }
 
+    @Transactional()
     public async updateCashFlowForTransaction({
         transaction,
         operation,
@@ -276,31 +249,26 @@ export class CashFlowService {
         transaction: ITransactionMessage;
         operation: OperationType;
     }) {
-        await this.commonService.confirmTransaction(async () => {
-            const { userId, timestamp, price, originalPrice, transactionType } =
-                transaction;
+        const { userId, timestamp, price, originalPrice, transactionType } =
+            transaction;
 
-            const transactionDate = new Date(timestamp);
+        const transactionDate = dayjs(timestamp).toDate();
 
-            let cashFlow = await this.findCashFlowDayByDate({
-                date: transactionDate,
-                userId,
-            });
+        let cashFlow = await this.findCashFlowDayByDate({
+            date: transactionDate,
+            userId,
+        });
 
-            if (!cashFlow) {
-                cashFlow = await this.createCashFlowDay(
-                    userId,
-                    transactionDate,
-                );
-            }
+        if (!cashFlow) {
+            cashFlow = await this.createCashFlowDay(userId, transactionDate);
+        }
 
-            await this.updateCashFlowDayForTransactionType({
-                cashFlow,
-                transactionType,
-                operation,
-                price: Number(price),
-                originalPrice: Number(originalPrice),
-            });
+        await this.updateCashFlowDayForTransactionType({
+            cashFlow,
+            transactionType,
+            operation,
+            price: Number(price),
+            originalPrice: Number(originalPrice),
         });
     }
 }

@@ -1,7 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { Injectable, Logger } from '@nestjs/common';
 import { Report } from './entities/report.entity';
-import { Repository } from 'typeorm';
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
 import { CommonService } from 'src/common/common.service';
 import { ReportStatus } from './enums/report-status.enum';
@@ -17,14 +15,15 @@ import { NotificationsDBService } from 'src/notifications/notifications-db.servi
 import { RedisPublisher } from '../async-worker/publisher/redis.publisher';
 import { IReportRequestedMessage } from '../async-worker/types/messages';
 import { ASYNC_WORKER } from '../common/constants/constants';
+import { ReportRepository } from './report.repository';
 
 @Injectable()
 export class ReportsService {
+    private readonly logger = new Logger(ReportsService.name);
     private readonly emitter: EventEmitter;
 
     constructor(
-        @InjectRepository(Report)
-        private readonly reportRepository: Repository<Report>,
+        private readonly reportRepository: ReportRepository,
         private readonly commonService: CommonService,
         private readonly analyticsService: AnalyticsService,
         private readonly notificationsDBService: NotificationsDBService,
@@ -42,29 +41,21 @@ export class ReportsService {
     }
 
     public async getReportById(reportId: number): Promise<Report> {
-        return await this.reportRepository.findOneBy({ id: reportId });
+        return await this.reportRepository.findById(reportId);
     }
 
     public async getUsersReports(userId: number): Promise<Report[]> {
-        return await this.reportRepository.find({
-            where: { userId },
-            order: { createdAt: 'DESC' },
-        });
+        return await this.reportRepository.findByUserId(userId);
     }
 
     public async createReportRequest(
         reportDto: ReportJobDto,
         userId: number,
     ): Promise<IGenericMessageResponse> {
-        const report = this.reportRepository.create({
+        const newReport = await this.reportRepository.upsert({
             userId: userId,
             status: ReportStatus.PENDING,
         });
-
-        const newReport = await this.commonService.saveEntity(
-            this.reportRepository,
-            report,
-        );
 
         await this.redisPublisher.publishToStream({
             streamName: ASYNC_WORKER.REDIS_STREAMS.REPORT_PROCESSING,
@@ -85,7 +76,7 @@ export class ReportsService {
         const { reportId, month, userId } = reportDto;
 
         try {
-            await this.reportRepository.save({
+            await this.reportRepository.upsert({
                 id: reportId,
                 status: ReportStatus.PROCESSING,
             });
@@ -111,7 +102,7 @@ export class ReportsService {
             const parser = new Parser();
             const csv = parser.parse(reportContent);
 
-            await this.reportRepository.save({
+            await this.reportRepository.upsert({
                 id: reportId,
                 status: ReportStatus.DONE,
                 filename: `${userId}-${month}-summary.csv`,
@@ -127,7 +118,7 @@ export class ReportsService {
                 reportDto,
             );
         } catch (error) {
-            const report = await this.reportRepository.save({
+            const report = await this.reportRepository.upsert({
                 id: reportId,
                 status: ReportStatus.ERROR,
             });
@@ -136,19 +127,19 @@ export class ReportsService {
                 `${report.userId}.${reportId}.report-status`,
                 ReportStatus.ERROR,
             );
+
+            this.logger.error(
+                `Error generating report ${reportId} for user ${userId}`,
+                error,
+            );
         }
     }
 
     public async deleteReportsOlderThanOneDay(): Promise<IGenericMessageResponse> {
-        const reports = await this.reportRepository
-            .createQueryBuilder('r')
-            .where('r.created_at < NOW() - INTERVAL "1 Day"')
-            .getMany();
+        const reports =
+            await this.reportRepository.findReportsOlderThanOneDay();
 
-        await this.commonService.removeMultipleEntities(
-            this.reportRepository,
-            reports,
-        );
+        await this.reportRepository.deleteMultiple(reports);
 
         return this.commonService.generateGenericMessageResponse(
             'Relatórios com mais de 1h de geração foram deletados.',

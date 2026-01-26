@@ -1,28 +1,18 @@
-import {
-    forwardRef,
-    Inject,
-    Injectable,
-    UnauthorizedException,
-} from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { BankAccount } from './entities/bank.entity';
-import { Repository } from 'typeorm';
 import { CreateBankAccountDto } from './dto/create-bank-account.dto';
 import { CommonService } from 'src/common/common.service';
 import { UpdateBankAccountDto } from './dto/update-bank-account.dto';
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
-import { IncomeService } from 'src/income/income.service';
 import { ITransactionMessage } from '../async-worker/types/messages';
 import { OperationType } from '../common/interfaces/operation-type';
+import { BankAccountRepository } from './bank-account.repository';
 
 @Injectable()
 export class BankAccountsService {
     constructor(
-        @InjectRepository(BankAccount)
-        private readonly bankAccountRepository: Repository<BankAccount>,
+        private readonly bankAccountRepository: BankAccountRepository,
         private readonly commonService: CommonService,
-        @Inject(forwardRef(() => IncomeService))
-        private readonly incomeService: IncomeService,
     ) {}
 
     public async findById(
@@ -30,9 +20,8 @@ export class BankAccountsService {
         userId: number,
         checkEntityExistence = true,
     ): Promise<BankAccount> {
-        const bankAccount = await this.bankAccountRepository.findOneBy({
-            id: bankAccountId,
-        });
+        const bankAccount =
+            await this.bankAccountRepository.findById(bankAccountId);
 
         if (checkEntityExistence) {
             this.commonService.checkEntityExistence(
@@ -51,7 +40,8 @@ export class BankAccountsService {
     }
 
     public async findByUserId(userId: number): Promise<BankAccount[]> {
-        const bankAccount = await this.bankAccountRepository.findBy({ userId });
+        const bankAccount =
+            await this.bankAccountRepository.findByUserId(userId);
         this.commonService.checkEntityExistence(bankAccount, 'Conta bancária');
 
         return bankAccount;
@@ -61,40 +51,24 @@ export class BankAccountsService {
         createBankAccountDto: CreateBankAccountDto,
         userId: number,
     ): Promise<BankAccount> {
-        const newBankAccount = this.bankAccountRepository.create({
+        return await this.bankAccountRepository.upsert({
             bank: createBankAccountDto.bank,
             currentBalance: createBankAccountDto.currentBalance,
             userId: userId,
         });
-
-        await this.commonService.saveEntity(
-            this.bankAccountRepository,
-            newBankAccount,
-        );
-
-        return newBankAccount;
     }
 
     public async createMultiple(
         bankAccounts: CreateBankAccountDto[],
         userId: number,
     ): Promise<IGenericMessageResponse> {
-        const accounts: BankAccount[] = [];
+        const accounts = bankAccounts.map((bankAccount) => ({
+            bank: bankAccount.bank,
+            currentBalance: bankAccount.currentBalance,
+            userId: userId,
+        }));
 
-        for (const bankAccount of bankAccounts) {
-            accounts.push(
-                this.bankAccountRepository.create({
-                    bank: bankAccount.bank,
-                    currentBalance: bankAccount.currentBalance,
-                    userId: userId,
-                }),
-            );
-        }
-
-        await this.commonService.saveMultipleEntities(
-            this.bankAccountRepository,
-            accounts,
-        );
+        await this.bankAccountRepository.upsert(accounts);
 
         return this.commonService.generateGenericMessageResponse(
             'Contas bancárias registradas com sucesso.',
@@ -109,12 +83,7 @@ export class BankAccountsService {
         const bankAccount = await this.findById(id, userId);
         bankAccount.currentBalance = updateBankAccountDto.currentBalance;
 
-        await this.commonService.saveEntity(
-            this.bankAccountRepository,
-            bankAccount,
-        );
-
-        return bankAccount;
+        return await this.bankAccountRepository.upsert(bankAccount);
     }
 
     public async updateCurrentBalanceForTransaction({

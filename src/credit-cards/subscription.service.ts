@@ -1,124 +1,90 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Subscription } from './entities/subscription.entity';
-import { Repository } from 'typeorm';
 import { CommonService } from 'src/common/common.service';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
 import { CreditCardsService } from './credit-cards.service';
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
+import { SubscriptionRepository } from './subscription.repository';
 
 @Injectable()
 export class SubscriptionService {
-  constructor(
-    @InjectRepository(Subscription)
-    private readonly subscriptionRepository: Repository<Subscription>,
-    @Inject() private readonly creditCardService: CreditCardsService,
-    private readonly commonService: CommonService,
-  ) {}
+    constructor(
+        private readonly subscriptionRepository: SubscriptionRepository,
+        @Inject() private readonly creditCardService: CreditCardsService,
+        private readonly commonService: CommonService,
+    ) {}
 
-  public async findById(id: number): Promise<Subscription> {
-    const subscription = await this.subscriptionRepository.findOne({
-      where: { id },
-      relations: {
-        creditCard: true,
-        expenses: {
-          creditCard: false,
-          bankAccount: false,
-          subscription: false,
-          invoice: { creditCard: false, expenses: false },
-        },
-      },
-    });
-    this.commonService.checkEntityExistence(subscription, 'Assinatura');
+    public async findById(id: number): Promise<Subscription> {
+        const subscription = await this.subscriptionRepository.findById(id);
+        this.commonService.checkEntityExistence(subscription, 'Assinatura');
 
-    return subscription;
-  }
-
-  public async findByUser(userId: number): Promise<Subscription[]> {
-    return await this.subscriptionRepository.find({
-      where: { userId },
-      relations: { creditCard: true },
-    });
-  }
-
-  public async findByCreditCard(
-    creditCardId: number,
-  ): Promise<Subscription[]> {
-    return await this.subscriptionRepository.find({
-      where: { creditCard: { id: creditCardId } },
-      relations: { creditCard: true },
-    });
-  }
-
-  public async create(
-    subscription: CreateSubscriptionDto,
-    userId: number,
-  ): Promise<Subscription> {
-    const creditCard = await this.creditCardService.findById(
-      subscription.creditCardId,
-      userId,
-    );
-
-    const newSubscription = this.subscriptionRepository.create({
-      ...subscription,
-      creditCard,
-      userId,
-    });
-
-    await this.commonService.saveEntity(
-      this.subscriptionRepository,
-      newSubscription,
-    );
-
-    return newSubscription;
-  }
-
-  public async update(
-    id: number,
-    dto: UpdateSubscriptionDto,
-    userId: number,
-  ): Promise<Subscription> {
-    const subscription = await this.findById(id);
-
-    const creditCard = dto.creditCardId
-      ? await this.creditCardService.findById(dto.creditCardId, userId)
-      : null;
-
-    if (creditCard) {
-      subscription.creditCard = creditCard;
+        return subscription;
     }
 
-    if (dto.name) {
-      subscription.name = dto.name;
+    public async findByUser(userId: number): Promise<Subscription[]> {
+        return await this.subscriptionRepository.findByUser(userId);
     }
 
-    if (dto.price) {
-      subscription.price = dto.price;
+    public async findByCreditCard(
+        creditCardId: number,
+    ): Promise<Subscription[]> {
+        return await this.subscriptionRepository.findByCreditCard(creditCardId);
     }
 
-    if (dto.billingDay) {
-      subscription.billingDay = dto.billingDay;
+    public async create(
+        subscription: CreateSubscriptionDto,
+        userId: number,
+    ): Promise<Subscription> {
+        const creditCard = await this.creditCardService.findById(
+            subscription.creditCardId,
+            userId,
+        );
+
+        return await this.subscriptionRepository.upsert({
+            ...subscription,
+            creditCard,
+            userId,
+        });
     }
 
-    await this.commonService.saveEntity(
-      this.subscriptionRepository,
-      subscription,
-    );
+    public async update(
+        id: number,
+        dto: UpdateSubscriptionDto,
+        userId: number,
+    ): Promise<Subscription> {
+        const subscription = await this.findById(id);
 
-    return subscription;
-  }
+        const creditCard = dto.creditCardId
+            ? await this.creditCardService.findById(dto.creditCardId, userId)
+            : null;
 
-  public async delete(id: number): Promise<IGenericMessageResponse> {
-    const subscription = await this.findById(id);
+        if (creditCard) {
+            subscription.creditCard = creditCard;
+        }
 
-    await this.commonService.removeEntity(
-      this.subscriptionRepository,
-      subscription,
-    );
+        if (dto.name) {
+            subscription.name = dto.name;
+        }
 
-    return this.commonService.generateGenericMessageResponse(
-      'Assinatura removida com sucesso.',
-    );
-  }
+        if (dto.price) {
+            subscription.price = dto.price;
+        }
+
+        if (dto.billingDay) {
+            subscription.billingDay = dto.billingDay;
+        }
+
+        return await this.subscriptionRepository.upsert(subscription);
+    }
+
+    public async delete(id: number): Promise<IGenericMessageResponse> {
+        const subscription = await this.findById(id);
+
+        await this.subscriptionRepository.delete(subscription);
+
+        return this.commonService.generateGenericMessageResponse(
+            'Assinatura removida com sucesso.',
+        );
+    }
 }

@@ -10,6 +10,7 @@ import { Report } from './entities/report.entity';
 import { ReportsController } from './reports.controller';
 import { NotificationsModule } from 'src/notifications/notifications.module';
 import { AsyncWorkerModule } from '../async-worker/async-worker.module';
+import { ReportRepository } from './report.repository';
 
 @Module({
     imports: [
@@ -21,7 +22,7 @@ import { AsyncWorkerModule } from '../async-worker/async-worker.module';
         forwardRef(() => AsyncWorkerModule),
     ],
     controllers: [AnalyticsController, ReportsController],
-    providers: [AnalyticsService, ReportsService],
+    providers: [AnalyticsService, ReportsService, ReportRepository],
     exports: [ReportsService, AnalyticsService],
 })
 export class AnalyticsModule {}

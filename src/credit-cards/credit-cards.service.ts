@@ -1,7 +1,5 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { CreditCard } from './entities/credit-card.entity';
-import { Repository } from 'typeorm';
 import { CommonService } from 'src/common/common.service';
 import { CreateCreditCardDto } from './dto/create-credit-card.dto';
 import { UpdateCreditCardDto } from './dto/update-credit-card.dto';
@@ -15,13 +13,13 @@ import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-r
 import { InvoiceStatus } from './enums/invoice-status.enum';
 import { BankAccountsService } from 'src/bank-accounts/bank-accounts.service';
 import { getFirstDayOfMonth } from '../common/utils/dates.utils';
+import { CreditCardRepository } from './credit-card.repository';
 import dayjs from 'dayjs';
 
 @Injectable()
 export class CreditCardsService {
     constructor(
-        @InjectRepository(CreditCard)
-        private readonly creditCardRepository: Repository<CreditCard>,
+        private readonly creditCardRepository: CreditCardRepository,
         private readonly commonService: CommonService,
         private readonly bankAccountService: BankAccountsService,
     ) {}
@@ -30,22 +28,8 @@ export class CreditCardsService {
         creditCardId: number,
         userId: number,
     ): Promise<CreditCard> {
-        const creditCard = await this.creditCardRepository.findOne({
-            where: { id: creditCardId },
-            relations: {
-                invoices: {
-                    expenses: false,
-                    creditCard: false,
-                },
-                subscriptions: { expenses: false },
-                bankAccount: { expenses: false },
-            },
-            order: {
-                invoices: {
-                    closingDate: 'asc',
-                },
-            },
-        });
+        const creditCard =
+            await this.creditCardRepository.findById(creditCardId);
         this.commonService.checkEntityExistence(
             creditCard,
             'Cartão de crédito',
@@ -67,11 +51,8 @@ export class CreditCardsService {
         paidInvoicesTotal: number;
         invoicesTotal: number;
     }> {
-        const creditCards = await this.creditCardRepository
-            .createQueryBuilder('cc')
-            .leftJoinAndSelect('cc.invoices', 'in')
-            .andWhere('cc.user_id = :userId', { userId })
-            .getMany();
+        const creditCards =
+            await this.creditCardRepository.findByUserIdWithInvoices(userId);
 
         if (isNullOrUndefined(creditCards) || isEmpty(creditCards)) {
             return { paidInvoicesTotal: 0, invoicesTotal: 0 };
@@ -104,19 +85,14 @@ export class CreditCardsService {
     }
 
     public async findByUserId(userId: number): Promise<CreditCard[]> {
-        return await this.creditCardRepository
-            .createQueryBuilder('cc')
-            .leftJoinAndSelect('cc.invoices', 'invoice')
-            .leftJoinAndSelect('cc.subscriptions', 'subscriptions')
-            .where('cc.user_id = :userId', { userId })
-            .getMany();
+        return await this.creditCardRepository.findByUserId(userId);
     }
 
     public async create(
         creditCard: CreateCreditCardDto,
         userId: number,
     ): Promise<CreditCard> {
-        const newCreditCard = this.creditCardRepository.create({
+        return await this.creditCardRepository.upsert({
             ...creditCard,
             bankAccount: creditCard.bankAccountId
                 ? await this.bankAccountService.findById(
@@ -127,41 +103,29 @@ export class CreditCardsService {
                 : undefined,
             userId,
         });
-
-        await this.commonService.saveEntity(
-            this.creditCardRepository,
-            newCreditCard,
-        );
-
-        return newCreditCard;
     }
 
     public async createMultiple(
         creditCards: CreateCreditCardDto[],
         userId: number,
     ): Promise<IGenericMessageResponse> {
-        const newCreditCards: CreditCard[] = [];
+        const newCreditCards = [];
 
         for (const cc of creditCards) {
-            newCreditCards.push(
-                this.creditCardRepository.create({
-                    ...cc,
-                    bankAccount: cc.bankAccountId
-                        ? await this.bankAccountService.findById(
-                              cc.bankAccountId,
-                              userId,
-                              false,
-                          )
-                        : undefined,
-                    userId,
-                }),
-            );
+            newCreditCards.push({
+                ...cc,
+                bankAccount: cc.bankAccountId
+                    ? await this.bankAccountService.findById(
+                          cc.bankAccountId,
+                          userId,
+                          false,
+                      )
+                    : undefined,
+                userId,
+            });
         }
 
-        await this.commonService.saveMultipleEntities(
-            this.creditCardRepository,
-            newCreditCards,
-        );
+        await this.creditCardRepository.upsert(newCreditCards);
 
         return this.commonService.generateGenericMessageResponse(
             'Cartões de Crédito registrados com sucesso.',
@@ -184,12 +148,7 @@ export class CreditCardsService {
             }
         });
 
-        await this.commonService.saveEntity(
-            this.creditCardRepository,
-            creditCard,
-        );
-
-        return creditCard;
+        return await this.creditCardRepository.upsert(creditCard);
     }
 
     public async delete(
@@ -198,10 +157,7 @@ export class CreditCardsService {
     ): Promise<IGenericMessageResponse> {
         const creditCard = await this.findById(creditCardId, userId);
 
-        await this.commonService.removeEntity(
-            this.creditCardRepository,
-            creditCard,
-        );
+        await this.creditCardRepository.delete(creditCard);
 
         return this.commonService.generateGenericMessageResponse(
             'Cartão de crédito deletado com sucesso.',

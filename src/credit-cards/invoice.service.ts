@@ -1,7 +1,5 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Invoice } from './entities/invoice.entity';
-import { Repository } from 'typeorm';
 import { CommonService } from 'src/common/common.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
@@ -11,57 +9,36 @@ import { ExpensesService } from 'src/expenses/expenses.service';
 import { ClosedInvoicesDto } from './dto/closed-invoices.dto';
 import {
     formatDate,
-    getNextBusinessDay,
     getFirstDayOfMonth,
     getLastDayOfMonth,
+    getNextBusinessDay,
     getToday,
 } from 'src/common/utils/dates.utils';
-import { isNull } from '../common/utils/validation.utils';
+import { isEmpty, isNull } from '../common/utils/validation.utils';
 import { CreditCard } from './entities/credit-card.entity';
 import { ITransactionMessage } from '../async-worker/types/messages';
 import { OperationType } from '../common/interfaces/operation-type';
+import { InvoiceRepository } from './invoice.repository';
+import { Transactional } from '@nestjs-cls/transactional';
+import dayjs from 'dayjs';
 
 @Injectable()
 export class InvoiceService {
     constructor(
-        @InjectRepository(Invoice)
-        private readonly invoiceRepository: Repository<Invoice>,
+        private readonly invoiceRepository: InvoiceRepository,
         @Inject(forwardRef(() => ExpensesService))
         private readonly expenseService: ExpensesService,
         private readonly commonService: CommonService,
     ) {}
 
     public async findById(id: number): Promise<Invoice> {
-        const invoice = await this.invoiceRepository.findOne({
-            where: { id },
-            relations: {
-                expenses: {
-                    creditCard: false,
-                    bankAccount: false,
-                    invoice: false,
-                },
-                creditCard: {
-                    expenses: false,
-                    invoices: false,
-                    subscriptions: false,
-                },
-            },
-            order: {
-                expenses: {
-                    expenseDate: 'asc',
-                },
-            },
-        });
-
+        const invoice = await this.invoiceRepository.findById(id);
         this.commonService.checkEntityExistence(invoice, 'Invoice');
 
         return invoice;
     }
 
-    public async findByMonth(
-        date: string,
-        userId: number,
-    ): Promise<Invoice[]> {
+    public async findByMonth(date: string, userId: number): Promise<Invoice[]> {
         const firstDayOfTheMonth = formatDate(
             getFirstDayOfMonth(date),
             'YYYY-MM-DD',
@@ -71,19 +48,11 @@ export class InvoiceService {
             'YYYY-MM-DD',
         );
 
-        return await this.invoiceRepository
-            .createQueryBuilder('invoice')
-            .where(
-                'invoice.due_date between :firstDayOfTheMonth and :lastDayOfTheMonth',
-                {
-                    firstDayOfTheMonth: firstDayOfTheMonth,
-                    lastDayOfTheMonth: lastDayOfTheMonth,
-                },
-            )
-            .andWhere('invoice.user_id = :userId', {
-                userId,
-            })
-            .getMany();
+        return await this.invoiceRepository.findByMonth(
+            firstDayOfTheMonth,
+            lastDayOfTheMonth,
+            userId,
+        );
     }
 
     public async findByMonthAndCreditCard(
@@ -95,18 +64,15 @@ export class InvoiceService {
             creditCardClosingDay,
             invoiceDate,
         );
-        const date = new Date(year, month, creditCardClosingDay)
-            .toISOString()
-            .split('T')[0];
+        const closingDate = dayjs()
+            .year(year)
+            .month(month)
+            .date(creditCardClosingDay);
 
-        return await this.invoiceRepository
-            .createQueryBuilder('invoice')
-            .leftJoinAndSelect('invoice.creditCard', 'cc')
-            .where('invoice.creditCardId = :creditCardId', { creditCardId })
-            .andWhere('invoice.closing_date = :date', {
-                date,
-            })
-            .getOne();
+        return await this.invoiceRepository.findByMonthAndCreditCard(
+            creditCardId,
+            formatDate(closingDate, 'YYYY-MM-DD'),
+        );
     }
 
     private computeInvoiceStatus({
@@ -137,9 +103,7 @@ export class InvoiceService {
         return invoiceStatus;
     }
 
-    public async create(
-        createInvoiceDto: CreateInvoiceDto,
-    ): Promise<Invoice> {
+    public async create(createInvoiceDto: CreateInvoiceDto): Promise<Invoice> {
         const { invoiceDate, dateToComputeStatus, creditCard } =
             createInvoiceDto;
 
@@ -148,20 +112,17 @@ export class InvoiceService {
 
         const { month, year } = getInvoiceMonth(closingDay, invoiceDate);
 
-        const invoiceClosingDate = new Date(year, month);
-        invoiceClosingDate.setDate(closingDay);
-
-        const invoiceDueDate = new Date(year, month);
+        const invoiceMonthAndYear = dayjs().year(year).month(month);
+        const invoiceClosingDate = invoiceMonthAndYear.date(closingDay);
+        let invoiceDueDate = invoiceMonthAndYear.date(dueDay);
 
         // If the due day is smaller than the closing day, that means
-        // that the invoice due day is on the next month
+        // the invoice due date is on the next month
         if (dueDay < closingDay) {
-            invoiceDueDate.setMonth(invoiceDueDate.getMonth() + 1);
+            invoiceDueDate = invoiceDueDate.add(1, 'month');
         }
 
-        invoiceDueDate.setDate(dueDay);
-
-        const invoice = this.invoiceRepository.create({
+        return await this.invoiceRepository.upsert({
             currentPrice: 0,
             totalPrice: 0,
             closingDate: invoiceClosingDate,
@@ -172,10 +133,6 @@ export class InvoiceService {
                 date: dateToComputeStatus ?? invoiceDate,
             }),
         });
-
-        await this.commonService.saveEntity(this.invoiceRepository, invoice);
-
-        return invoice;
     }
 
     public async createInvoicesForExpense({
@@ -192,13 +149,13 @@ export class InvoiceService {
         let invoice = await this.findByMonthAndCreditCard(
             creditCard.id,
             creditCard.closingDay,
-            new Date(expenseDate),
+            dayjs(expenseDate).toDate(),
         );
 
         if (isNull(invoice)) {
             invoice = await this.create({
                 creditCard,
-                invoiceDate: new Date(expenseDate),
+                invoiceDate: dayjs(expenseDate).toDate(),
             });
         }
 
@@ -207,8 +164,10 @@ export class InvoiceService {
         if (installments) {
             for (let i = 1; i <= installments - 1; i++) {
                 const previousInvoice = invoices[i - 1];
-                const nextInvoiceDate = new Date(previousInvoice.closingDate);
-                nextInvoiceDate.setMonth(nextInvoiceDate.getMonth() + 1);
+                const nextInvoiceDate = dayjs(previousInvoice.closingDate).add(
+                    1,
+                    'month',
+                );
 
                 /*
                  * We use the previous invoice closing date, because it will
@@ -218,16 +177,16 @@ export class InvoiceService {
                 let installmentInvoice = await this.findByMonthAndCreditCard(
                     creditCard.id,
                     creditCard.closingDay,
-                    new Date(previousInvoice.closingDate),
+                    dayjs(previousInvoice.closingDate).toDate(),
                 );
 
                 if (isNull(installmentInvoice)) {
                     installmentInvoice = await this.create({
                         creditCard,
-                        invoiceDate: nextInvoiceDate,
-                        dateToComputeStatus: new Date(
+                        invoiceDate: nextInvoiceDate.toDate(),
+                        dateToComputeStatus: dayjs(
                             previousInvoice.closingDate,
-                        ),
+                        ).toDate(),
                     });
                 }
 
@@ -238,6 +197,7 @@ export class InvoiceService {
         return invoices;
     }
 
+    @Transactional()
     public async payInvoice(
         invoiceId: number,
     ): Promise<IGenericMessageResponse> {
@@ -251,10 +211,7 @@ export class InvoiceService {
         ) {
             invoiceToBePaid.status = InvoiceStatus.PAID;
 
-            await this.commonService.saveEntity(
-                this.invoiceRepository,
-                invoiceToBePaid,
-            );
+            await this.invoiceRepository.upsert(invoiceToBePaid);
         }
 
         for (const expense of invoiceToBePaid.expenses) {
@@ -266,84 +223,54 @@ export class InvoiceService {
         );
     }
 
+    @Transactional()
     public async closeInvoices(): Promise<ClosedInvoicesDto[]> {
-        const today = new Date().toISOString().split('T')[0];
+        const today = formatDate(getToday(), 'YYYY-MM-DD');
 
-        const invoicesToBeClosed = await this.invoiceRepository
-            .createQueryBuilder('in')
-            .leftJoinAndSelect('in.creditCard', 'cc')
-            .where('in.closing_date = :today', { today: today })
-            .andWhere('in.status != :closed', {
-                closed: InvoiceStatus.CLOSED,
-            })
-            .andWhere('in.status != :paid', {
-                paid: InvoiceStatus.PAID,
-            })
-            .getMany();
+        const invoicesToBeClosed =
+            await this.invoiceRepository.findInvoicesToBeClosed(today);
 
-        if (invoicesToBeClosed.length > 0) {
-            invoicesToBeClosed.forEach((invoice) => {
-                invoice.status = InvoiceStatus.CLOSED;
-            });
+        if (isEmpty(invoicesToBeClosed)) {
+            return [];
+        }
 
-            await this.commonService.saveMultipleEntities(
-                this.invoiceRepository,
-                invoicesToBeClosed,
+        invoicesToBeClosed.forEach((invoice) => {
+            invoice.status = InvoiceStatus.CLOSED;
+        });
+
+        await this.invoiceRepository.upsert(invoicesToBeClosed);
+
+        const nextMonth = formatDate(getToday().add(1, 'month'), 'YYYY-MM-DD');
+
+        const invoicesToBeMarkedAsCurrent =
+            await this.invoiceRepository.findInvoicesToBeMarkedAsCurrent(
+                nextMonth,
             );
 
-            const nextMonth = new Date();
-            nextMonth.setMonth(new Date().getMonth() + 1);
+        if (!isEmpty(invoicesToBeMarkedAsCurrent)) {
+            invoicesToBeMarkedAsCurrent.forEach((invoice) => {
+                invoice.status = InvoiceStatus.OPENED_CURRENT;
+            });
 
-            const invoicesToBeMarkedAsCurrent = await this.invoiceRepository
-                .createQueryBuilder('in')
-                .leftJoinAndSelect('in.creditCard', 'cc')
-                .where('in.closing_date = :nextMonth', {
-                    nextMonth: nextMonth.toISOString().split('T')[0],
-                })
-                .andWhere('in.status != :closed', {
-                    closed: InvoiceStatus.CLOSED,
-                })
-                .andWhere('in.status != :paid', {
-                    paid: InvoiceStatus.PAID,
-                })
-                .getMany();
-
-            if (invoicesToBeMarkedAsCurrent.length > 0) {
-                invoicesToBeMarkedAsCurrent.forEach((invoice) => {
-                    invoice.status = InvoiceStatus.OPENED_CURRENT;
-                });
-
-                await this.commonService.saveMultipleEntities(
-                    this.invoiceRepository,
-                    invoicesToBeMarkedAsCurrent,
-                );
-            }
+            await this.invoiceRepository.upsert(invoicesToBeMarkedAsCurrent);
         }
 
         return invoicesToBeClosed.map(ClosedInvoicesDto.entityToDto);
     }
 
+    @Transactional()
     public async markInvoicesAsOverdue(): Promise<ClosedInvoicesDto[]> {
         const today = formatDate(getToday(), 'YYYY-MM-DD');
 
-        const overdueInvoices = await this.invoiceRepository
-            .createQueryBuilder('in')
-            .leftJoinAndSelect('in.creditCard', 'cc')
-            .where('in.due_date < :today', { today: today })
-            .andWhere('in.status = :closed', {
-                closed: InvoiceStatus.CLOSED,
-            })
-            .getMany();
+        const overdueInvoices =
+            await this.invoiceRepository.findOverdueInvoices(today);
 
         if (overdueInvoices.length > 0) {
             overdueInvoices.forEach((invoice) => {
                 invoice.status = InvoiceStatus.OVERDUE;
             });
 
-            await this.commonService.saveMultipleEntities(
-                this.invoiceRepository,
-                overdueInvoices,
-            );
+            await this.invoiceRepository.upsert(overdueInvoices);
         }
 
         return overdueInvoices.map(ClosedInvoicesDto.entityToDto);

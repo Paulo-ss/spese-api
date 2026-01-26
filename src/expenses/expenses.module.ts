@@ -7,6 +7,7 @@ import { CreditCardsModule } from 'src/credit-cards/credit-cards.module';
 import { BankAccountsModule } from 'src/bank-accounts/bank-accounts.module';
 import { CategoryModule } from 'src/category/category.module';
 import { AsyncWorkerModule } from 'src/async-worker/async-worker.module';
+import { ExpenseRepository } from './expense.repository';
 
 @Module({
     imports: [
@@ -17,7 +18,7 @@ import { AsyncWorkerModule } from 'src/async-worker/async-worker.module';
         forwardRef(() => AsyncWorkerModule),
     ],
     controllers: [ExpensesController],
-    providers: [ExpensesService],
+    providers: [ExpensesService, ExpenseRepository],
     exports: [ExpensesService],
 })
 export class ExpensesModule {}

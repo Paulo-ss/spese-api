@@ -1,13 +1,13 @@
 import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  ParseIntPipe,
-  Post,
-  Put,
-  UseGuards,
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Param,
+    ParseIntPipe,
+    Post,
+    Put,
+    UseGuards,
 } from '@nestjs/common';
 import { CreditCardsService } from './credit-cards.service';
 import { CreateCreditCardDto } from './dto/create-credit-card.dto';
@@ -23,108 +23,108 @@ import { SimplifiedCreditCardDto } from './dto/simplified-credit-card.dto';
 @UseGuards(IsAuthenticatedGuard)
 @Controller('credit-card')
 export class CreditCardsController {
-  constructor(
-    private readonly creditCardsService: CreditCardsService,
-    private readonly invoiceService: InvoiceService,
-    private readonly subscriptionService: SubscriptionService,
-  ) {}
+    constructor(
+        private readonly creditCardsService: CreditCardsService,
+        private readonly invoiceService: InvoiceService,
+        private readonly subscriptionService: SubscriptionService,
+    ) {}
 
-  @Get(':id')
-  public async findCreditCardById(
-    @Param('id', ParseIntPipe) id: number,
-    @CurrentUser() userId: number,
-  ) {
-    return this.creditCardsService.findById(id, userId);
-  }
+    @Get(':id')
+    public async findCreditCardById(
+        @Param('id', ParseIntPipe) id: number,
+        @CurrentUser() userId: number,
+    ) {
+        return this.creditCardsService.findById(id, userId);
+    }
 
-  @Get('all/user')
-  public async findCreditCardByUserId(@CurrentUser() userId: number) {
-    const creditCards = await this.creditCardsService.findByUserId(userId);
+    @Get('all/user')
+    public async findCreditCardByUserId(@CurrentUser() userId: number) {
+        const creditCards = await this.creditCardsService.findByUserId(userId);
 
-    return creditCards && creditCards.length > 0
-      ? creditCards.map(SimplifiedCreditCardDto.entityToDto)
-      : [];
-  }
+        return creditCards && creditCards.length > 0
+            ? creditCards.map(SimplifiedCreditCardDto.entityToDto)
+            : [];
+    }
 
-  @Post()
-  public async createCreditCard(
-    @Body() creditCard: CreateCreditCardDto,
-    @CurrentUser() userId: number,
-  ) {
-    return this.creditCardsService.create(creditCard, userId);
-  }
+    @Post()
+    public async createCreditCard(
+        @Body() creditCard: CreateCreditCardDto,
+        @CurrentUser() userId: number,
+    ) {
+        return this.creditCardsService.create(creditCard, userId);
+    }
 
-  @Post('create-multiple')
-  public async createMultipleCreditCards(
-    @Body() creditCards: CreateCreditCardDto[],
-    @CurrentUser() userId: number,
-  ) {
-    return this.creditCardsService.createMultiple(creditCards, userId);
-  }
+    @Post('create-multiple')
+    public async createMultipleCreditCards(
+        @Body() creditCards: CreateCreditCardDto[],
+        @CurrentUser() userId: number,
+    ) {
+        return this.creditCardsService.createMultiple(creditCards, userId);
+    }
 
-  @Put(':id')
-  public async updateCreditCard(
-    @Body() creditCard: UpdateCreditCardDto,
-    @Param('id', ParseIntPipe) id: number,
-    @CurrentUser() userId: number,
-  ) {
-    return this.creditCardsService.update(creditCard, id, userId);
-  }
+    @Put(':id')
+    public async updateCreditCard(
+        @Body() creditCard: UpdateCreditCardDto,
+        @Param('id', ParseIntPipe) id: number,
+        @CurrentUser() userId: number,
+    ) {
+        return this.creditCardsService.update(creditCard, id, userId);
+    }
 
-  @Delete(':id')
-  public async deleteCreditCard(
-    @Param('id', ParseIntPipe) id: number,
-    @CurrentUser() userId: number,
-  ) {
-    return this.creditCardsService.delete(id, userId);
-  }
+    @Delete(':id')
+    public async deleteCreditCard(
+        @Param('id', ParseIntPipe) id: number,
+        @CurrentUser() userId: number,
+    ) {
+        return this.creditCardsService.delete(id, userId);
+    }
 
-  @Get('invoice/:id')
-  public async getInvoiceById(@Param('id', ParseIntPipe) id: number) {
-    return this.invoiceService.findById(id);
-  }
+    @Get('invoice/:id')
+    public async getInvoiceById(@Param('id', ParseIntPipe) id: number) {
+        return this.invoiceService.findById(id);
+    }
 
-  @Put('invoice/pay/:id')
-  public async payInvoice(@Param('id', ParseIntPipe) id: number) {
-    return this.invoiceService.payInvoice(id);
-  }
+    @Put('invoice/pay/:id')
+    public async payInvoice(@Param('id', ParseIntPipe) id: number) {
+        return this.invoiceService.payInvoice(id);
+    }
 
-  @Get('subscription/all/user')
-  public async getSubscriptionByUser(@CurrentUser() userId: number) {
-    return this.subscriptionService.findByUser(userId);
-  }
+    @Get('subscription/all/user')
+    public async getSubscriptionByUser(@CurrentUser() userId: number) {
+        return this.subscriptionService.findByUser(userId);
+    }
 
-  @Get('/:creditCardId/subscription')
-  public async getSubscriptionByCreditCard(
-    @Param('creditCardId', ParseIntPipe) creditCardId: number,
-  ) {
-    return this.subscriptionService.findByCreditCard(creditCardId);
-  }
+    @Get('/:creditCardId/subscription')
+    public async getSubscriptionByCreditCard(
+        @Param('creditCardId', ParseIntPipe) creditCardId: number,
+    ) {
+        return this.subscriptionService.findByCreditCard(creditCardId);
+    }
 
-  @Get('subscription/:id')
-  public async getSubscriptionById(@Param('id', ParseIntPipe) id: number) {
-    return this.subscriptionService.findById(id);
-  }
+    @Get('subscription/:id')
+    public async getSubscriptionById(@Param('id', ParseIntPipe) id: number) {
+        return this.subscriptionService.findById(id);
+    }
 
-  @Post('subscription')
-  public async createSubscription(
-    @Body() subscription: CreateSubscriptionDto,
-    @CurrentUser() userId: number,
-  ) {
-    return this.subscriptionService.create(subscription, userId);
-  }
+    @Post('subscription')
+    public async createSubscription(
+        @Body() subscription: CreateSubscriptionDto,
+        @CurrentUser() userId: number,
+    ) {
+        return this.subscriptionService.create(subscription, userId);
+    }
 
-  @Put('subscription/:id')
-  public async updateSubscription(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() subscription: UpdateSubscriptionDto,
-    @CurrentUser() userId: number,
-  ) {
-    return this.subscriptionService.update(id, subscription, userId);
-  }
+    @Put('subscription/:id')
+    public async updateSubscription(
+        @Param('id', ParseIntPipe) id: number,
+        @Body() subscription: UpdateSubscriptionDto,
+        @CurrentUser() userId: number,
+    ) {
+        return this.subscriptionService.update(id, subscription, userId);
+    }
 
-  @Delete('subscription/:id')
-  public async deleteSubscription(@Param('id', ParseIntPipe) id: number) {
-    return this.subscriptionService.delete(id);
-  }
+    @Delete('subscription/:id')
+    public async deleteSubscription(@Param('id', ParseIntPipe) id: number) {
+        return this.subscriptionService.delete(id);
+    }
 }

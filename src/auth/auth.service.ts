@@ -4,10 +4,8 @@ import {
     Injectable,
     UnauthorizedException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { CommonService } from 'src/common/common.service';
 import { UsersService } from 'src/users/users.service';
-import { Repository } from 'typeorm';
 import { JwtService } from 'src/jwt/jwt.service';
 import { SignUpDto } from './dto/sign-up.dto';
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
@@ -25,15 +23,14 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { isNull, isUndefined } from 'src/common/utils/validation.utils';
 import { ExternalSignInDto } from './dto/external-sign-in.dto';
 import { ExternalOauthService } from '../external-oauth/services/external-oauth.abstract.service';
-import { BlacklistedToken } from './entities/blacklisted-token.entity';
 import { MailerService } from 'src/mailer/mailer.service';
 import { DEPENDENCY_INJECTION_PROVIDERS } from 'src/common/constants/constants';
+import { BlacklistedTokenRepository } from './blacklisted-token.repository';
 
 @Injectable()
 export class AuthService {
     constructor(
-        @InjectRepository(BlacklistedToken)
-        private readonly blacklistedTokenRepository: Repository<BlacklistedToken>,
+        private readonly blacklistedTokenRepository: BlacklistedTokenRepository,
         private readonly usersService: UsersService,
         private readonly commonService: CommonService,
         private readonly jwtService: JwtService,
@@ -54,16 +51,11 @@ export class AuthService {
     ): Promise<void> {
         const user = await this.usersService.findOneById(userId);
 
-        const blacklistedToken = this.blacklistedTokenRepository.create({
+        await this.blacklistedTokenRepository.upsert({
             user,
             tokenId,
             createdAt: new Date().toISOString(),
         });
-
-        await this.commonService.saveEntity(
-            this.blacklistedTokenRepository,
-            blacklistedToken,
-        );
     }
 
     private async checkIfTokenIsBlacklisted(
@@ -72,10 +64,11 @@ export class AuthService {
     ): Promise<void> {
         const user = await this.usersService.findOneById(userId);
 
-        const count = await this.blacklistedTokenRepository.countBy({
-            user,
-            tokenId,
-        });
+        const count =
+            await this.blacklistedTokenRepository.countByUserAndTokenId(
+                user,
+                tokenId,
+            );
 
         if (count > 0) {
             throw new UnauthorizedException('Esse token já foi utilizado.');

@@ -6,6 +6,7 @@ import { Income } from './entities/income.entity';
 import { UsersModule } from 'src/users/users.module';
 import { BankAccountsModule } from 'src/bank-accounts/bank-accounts.module';
 import { AsyncWorkerModule } from '../async-worker/async-worker.module';
+import { IncomeRepository } from './income.repository';
 
 @Module({
     imports: [
@@ -15,7 +16,7 @@ import { AsyncWorkerModule } from '../async-worker/async-worker.module';
         forwardRef(() => AsyncWorkerModule),
     ],
     controllers: [IncomeController],
-    providers: [IncomeService],
+    providers: [IncomeService, IncomeRepository],
     exports: [IncomeService],
 })
 export class IncomeModule {}

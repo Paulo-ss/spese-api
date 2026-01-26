@@ -7,6 +7,7 @@ import { BankAccountsModule } from 'src/bank-accounts/bank-accounts.module';
 import { ExpensesModule } from 'src/expenses/expenses.module';
 import { IncomeModule } from 'src/income/income.module';
 import { CreditCardsModule } from 'src/credit-cards/credit-cards.module';
+import { CashFlowByDayRepository } from './cash-flow-by-day.repository';
 
 @Module({
     imports: [
@@ -17,7 +18,7 @@ import { CreditCardsModule } from 'src/credit-cards/credit-cards.module';
         forwardRef(() => CreditCardsModule),
     ],
     controllers: [CashFlowController],
-    providers: [CashFlowService],
+    providers: [CashFlowService, CashFlowByDayRepository],
     exports: [CashFlowService],
 })
 export class CashFlowModule {}

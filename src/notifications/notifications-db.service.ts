@@ -1,7 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Notification } from './entities/notification.entity';
-import { Repository } from 'typeorm';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
 import { CommonService } from 'src/common/common.service';
@@ -9,148 +7,126 @@ import { InvoicesDto } from './dto/invoices.dto';
 import { NotificationType } from './enums/notification-type.enum';
 import { NotificationsService } from './notifications.service';
 import { ReportJobDto } from 'src/analytics/dto/report-job.dto';
+import { NotificationRepository } from './notification.repository';
 
 @Injectable()
 export class NotificationsDBService {
-  constructor(
-    @InjectRepository(Notification)
-    private readonly notificationReporsitory: Repository<Notification>,
-    private readonly commonService: CommonService,
-    private readonly notificationsService: NotificationsService,
-  ) {}
+    constructor(
+        private readonly notificationRepository: NotificationRepository,
+        private readonly commonService: CommonService,
+        private readonly notificationsService: NotificationsService,
+    ) {}
 
-  private async findById(id: number): Promise<Notification> {
-    const notification = await this.notificationReporsitory.findOneBy({ id });
-    this.commonService.checkEntityExistence(notification, 'Notificação');
+    private async findById(id: number): Promise<Notification> {
+        const notification = await this.notificationRepository.findById(id);
+        this.commonService.checkEntityExistence(notification, 'Notificação');
 
-    return notification;
-  }
+        return notification;
+    }
 
-  public async findByUserId(userId: number): Promise<Notification[]> {
-    return await this.notificationReporsitory.find({
-      where: { userId },
-      order: {
-        createdAt: { direction: 'DESC' },
-        isRead: { direction: 'ASC' },
-      },
-    });
-  }
+    public async findByUserId(userId: number): Promise<Notification[]> {
+        return await this.notificationRepository.findByUserId(userId);
+    }
 
-  public async getUnreadNotificationsCountByUser(
-    userId: number,
-  ): Promise<number> {
-    return await this.notificationReporsitory.countBy({
-      isRead: false,
-      userId,
-    });
-  }
+    public async getUnreadNotificationsCountByUser(
+        userId: number,
+    ): Promise<number> {
+        return await this.notificationRepository.getUnreadCountByUserId(userId);
+    }
 
-  public async create(
-    createNotifcationDto: CreateNotificationDto,
-  ): Promise<Notification> {
-    const notification = this.notificationReporsitory.create({
-      userId: createNotifcationDto.userId,
-      type: createNotifcationDto.type,
-      title: createNotifcationDto.title,
-      content: createNotifcationDto.content,
-      referenceId: createNotifcationDto.referenceId,
-      isRead: false,
-    });
+    public async create(
+        createNotificationDto: CreateNotificationDto,
+    ): Promise<Notification> {
+        return await this.notificationRepository.upsert({
+            userId: createNotificationDto.userId,
+            type: createNotificationDto.type,
+            title: createNotificationDto.title,
+            content: createNotificationDto.content,
+            referenceId: createNotificationDto.referenceId,
+            isRead: false,
+        });
+    }
 
-    await this.commonService.throwInternalError(
-      this.commonService.saveEntity(this.notificationReporsitory, notification),
-    );
+    public async markNotificationAsRead(
+        id: number,
+    ): Promise<IGenericMessageResponse> {
+        const notification = await this.findById(id);
+        notification.isRead = true;
 
-    return notification;
-  }
+        await this.notificationRepository.upsert(notification);
 
-  public async markNotificationAsRead(
-    id: number,
-  ): Promise<IGenericMessageResponse> {
-    const notification = await this.findById(id);
-    notification.isRead = true;
+        return this.commonService.generateGenericMessageResponse(
+            'Notificação lida!',
+        );
+    }
 
-    await this.commonService.saveEntity(
-      this.notificationReporsitory,
-      notification,
-    );
+    public async deleteOneMonthNotifications(): Promise<IGenericMessageResponse> {
+        const oneMonthNotifications =
+            await this.notificationRepository.findOneMonthOldNotifications();
 
-    return this.commonService.generateGenericMessageResponse(
-      'Notificação lida!',
-    );
-  }
+        await this.notificationRepository.deleteMultiple(oneMonthNotifications);
 
-  public async deleteOneMonthNotifications(): Promise<IGenericMessageResponse> {
-    const today = new Date();
-    today.setMonth(today.getMonth() - 1);
+        return this.commonService.generateGenericMessageResponse(
+            'Notificações de 1 mês deletadas',
+        );
+    }
 
-    const oneMonthAgo = new Date(today).toISOString().split('T')[0];
+    public async emitClosedInvoicesEvent(invoices: InvoicesDto[]) {
+        for (const invoice of invoices) {
+            const invoiceDate = new Date(invoice.month);
 
-    const oneMonthNotifications = await this.notificationReporsitory
-      .createQueryBuilder('n')
-      .where('n.created_at = :oneMonthAgo', { oneMonthAgo })
-      .getMany();
+            const title = `Sua fatura ${invoice.creditCard.nickname} fechou!`;
+            const content = `Fatura do mês de ${invoiceDate.toLocaleDateString('pt-br', { month: 'long' })} está fechada, efetue o pagamento até o dia ${invoice.creditCard.dueDay}/${invoiceDate.toLocaleDateString('pt-br', { month: '2-digit' })}.`;
 
-    await this.commonService.removeMultipleEntities(
-      this.notificationReporsitory,
-      oneMonthNotifications,
-    );
+            const notification = await this.create({
+                userId: invoice.userId,
+                title,
+                content,
+                referenceId: invoice.invoiceId,
+                type: NotificationType.INVOICES,
+            });
 
-    return this.commonService.generateGenericMessageResponse(
-      'Notificações de 1 mês deletadas',
-    );
-  }
+            void this.notificationsService.emit(
+                `${invoice.userId}.notify`,
+                notification,
+            );
+        }
+    }
 
-  public async emitClosedInvoicesEvent(invoices: InvoicesDto[]) {
-    invoices.forEach(async (invoice) => {
-      const invoiceDate = new Date(invoice.month);
+    public async emitDelayedInvoicesEvent(invoices: InvoicesDto[]) {
+        invoices.forEach(async (invoice) => {
+            const invoiceDate = new Date(invoice.month);
 
-      const title = `Sua fatura ${invoice.creditCard.nickname} fechou!`;
-      const content = `Fatura do mês de ${invoiceDate.toLocaleDateString('pt-br', { month: 'long' })} está fechada, efetue o pagamento até o dia ${invoice.creditCard.dueDay}/${invoiceDate.toLocaleDateString('pt-br', { month: '2-digit' })}.`;
+            const title = `Fatura ${invoice.creditCard.nickname} atrasada!`;
+            const content = `A fatura do mês de ${invoiceDate.toLocaleDateString('pt-br', { month: 'long' })} está atrasada, efetue o pagamento o quanto antes.`;
 
-      const notification = await this.create({
-        userId: invoice.userId,
-        title,
-        content,
-        referenceId: invoice.invoiceId,
-        type: NotificationType.INVOICES,
-      });
+            const notification = await this.create({
+                userId: invoice.userId,
+                title,
+                content,
+                referenceId: invoice.invoiceId,
+                type: NotificationType.INVOICES,
+            });
 
-      this.notificationsService.emit(`${invoice.userId}.notify`, notification);
-    });
-  }
+            this.notificationsService.emit(
+                `${invoice.userId}.notify`,
+                notification,
+            );
+        });
+    }
 
-  public async emitDelayedInvoicesEvent(invoices: InvoicesDto[]) {
-    invoices.forEach(async (invoice) => {
-      const invoiceDate = new Date(invoice.month);
+    public async emitReportDoneNotification(report: ReportJobDto) {
+        const title = `Relatório pronto!`;
+        const content = `O seu relatório solicitado do mês ${report.month.replace('-', '/')} ficou pronto, clique aqui para baixar.`;
 
-      const title = `Fatura ${invoice.creditCard.nickname} atrasada!`;
-      const content = `A fatura do mês de ${invoiceDate.toLocaleDateString('pt-br', { month: 'long' })} está atrasada, efetue o pagamento o quanto antes.`;
+        const notification = await this.create({
+            userId: report.userId,
+            title,
+            content,
+            referenceId: report.reportId,
+            type: NotificationType.REPORTS,
+        });
 
-      const notification = await this.create({
-        userId: invoice.userId,
-        title,
-        content,
-        referenceId: invoice.invoiceId,
-        type: NotificationType.INVOICES,
-      });
-
-      this.notificationsService.emit(`${invoice.userId}.notify`, notification);
-    });
-  }
-
-  public async emitReportDoneNotification(report: ReportJobDto) {
-    const title = `Relatório pronto!`;
-    const content = `O seu relatório solicitado do mês ${report.month.replace('-', '/')} ficou pronto, clique aqui para baixar.`;
-
-    const notification = await this.create({
-      userId: report.userId,
-      title,
-      content,
-      referenceId: report.reportId,
-      type: NotificationType.REPORTS,
-    });
-
-    this.notificationsService.emit(`${report.userId}.notify`, notification);
-  }
+        this.notificationsService.emit(`${report.userId}.notify`, notification);
+    }
 }

@@ -1,103 +1,85 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Category } from './entities/category.entity';
-import { Repository } from 'typeorm';
 import { CommonService } from 'src/common/common.service';
 import { PersistCategoryDto } from './dto/persist-category.dto';
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
+import { CategoryRepository } from './category.repository';
 
 @Injectable()
 export class CategoryService {
-  constructor(
-    @InjectRepository(Category)
-    private readonly categoryRepository: Repository<Category>,
-    private readonly commonService: CommonService,
-  ) {}
+    constructor(
+        private readonly categoryRepository: CategoryRepository,
+        private readonly commonService: CommonService,
+    ) {}
 
-  public async findById(
-    id: number,
-    userId: number,
-    checkForExistence: boolean = true,
-  ): Promise<Category> {
-    const category = await this.categoryRepository.findOne({
-      where: { id, userId },
-    });
+    public async findById(
+        id: number,
+        userId: number,
+        checkForExistence: boolean = true,
+    ): Promise<Category> {
+        const category = await this.categoryRepository.findById(id, userId);
 
-    if (checkForExistence) {
-      this.commonService.checkEntityExistence(category, 'Categoria');
+        if (checkForExistence) {
+            this.commonService.checkEntityExistence(category, 'Categoria');
+        }
+
+        return category;
     }
 
-    return category;
-  }
-
-  public async findByUser(userId: number): Promise<Category[]> {
-    return await this.categoryRepository.find({ where: { userId } });
-  }
-
-  public async create(
-    categoryDto: PersistCategoryDto,
-    userId: number,
-  ): Promise<Category> {
-    const category = this.categoryRepository.create({
-      name: categoryDto.name,
-      color: categoryDto.color,
-      userId,
-    });
-    await this.commonService.saveEntity(this.categoryRepository, category);
-
-    return category;
-  }
-
-  public async createMultiple(
-    categoriesDto: PersistCategoryDto[],
-    userId: number,
-  ): Promise<IGenericMessageResponse> {
-    const categories: Category[] = [];
-
-    for (const category of categoriesDto) {
-      categories.push(
-        this.categoryRepository.create({
-          name: category.name,
-          color: category.color,
-          userId,
-        }),
-      );
+    public async findByUser(userId: number): Promise<Category[]> {
+        return await this.categoryRepository.findByUser(userId);
     }
 
-    await this.commonService.saveMultipleEntities(
-      this.categoryRepository,
-      categories,
-    );
+    public async create(
+        categoryDto: PersistCategoryDto,
+        userId: number,
+    ): Promise<Category> {
+        return await this.categoryRepository.upsert({
+            name: categoryDto.name,
+            color: categoryDto.color,
+            userId,
+        });
+    }
 
-    return this.commonService.generateGenericMessageResponse(
-      'Categorias criadas com sucesso.',
-    );
-  }
+    public async createMultiple(
+        categoriesDto: PersistCategoryDto[],
+        userId: number,
+    ): Promise<IGenericMessageResponse> {
+        const categories = categoriesDto.map((category) => ({
+            name: category.name,
+            color: category.color,
+            userId,
+        }));
 
-  public async update(
-    id: number,
-    categoryDto: PersistCategoryDto,
-    userId: number,
-  ): Promise<Category> {
-    const category = await this.findById(id, userId);
-    category.name = categoryDto.name;
-    category.color = categoryDto.color;
+        await this.categoryRepository.upsert(categories);
 
-    await this.commonService.saveEntity(this.categoryRepository, category);
+        return this.commonService.generateGenericMessageResponse(
+            'Categorias criadas com sucesso.',
+        );
+    }
 
-    return category;
-  }
+    public async update(
+        id: number,
+        categoryDto: PersistCategoryDto,
+        userId: number,
+    ): Promise<Category> {
+        const category = await this.findById(id, userId);
+        category.name = categoryDto.name;
+        category.color = categoryDto.color;
 
-  public async delete(
-    id: number,
-    userId: number,
-  ): Promise<IGenericMessageResponse> {
-    const category = await this.findById(id, userId);
+        return await this.categoryRepository.upsert(category);
+    }
 
-    await this.commonService.removeEntity(this.categoryRepository, category);
+    public async delete(
+        id: number,
+        userId: number,
+    ): Promise<IGenericMessageResponse> {
+        const category = await this.findById(id, userId);
 
-    return this.commonService.generateGenericMessageResponse(
-      'Categoria deletada com sucesso.',
-    );
-  }
+        await this.categoryRepository.delete(category);
+
+        return this.commonService.generateGenericMessageResponse(
+            'Categoria deletada com sucesso.',
+        );
+    }
 }

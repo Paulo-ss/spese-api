@@ -84,22 +84,6 @@ export class CommonService {
         }
     }
 
-    public async saveEntity<T>(repo: Repository<T>, entity: T) {
-        return await this.throwDuplicateError(repo.save(entity));
-    }
-
-    public async saveMultipleEntities<T>(repo: Repository<T>, entities: T[]) {
-        return await this.throwDuplicateError(repo.save(entities));
-    }
-
-    public async removeEntity<T>(repo: Repository<T>, entity: T) {
-        await this.throwInternalError(repo.remove(entity));
-    }
-
-    public async removeMultipleEntities<T>(repo: Repository<T>, entity: T[]) {
-        await this.throwInternalError(repo.remove(entity));
-    }
-
     public async confirmTransaction<T>(
         callback: (entityManager: EntityManager) => Promise<T>,
     ) {
