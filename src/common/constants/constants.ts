@@ -7,6 +7,7 @@ export const ASYNC_WORKER = {
         INCOME_UPDATED: 'income:updated',
         INCOME_DELETED: 'income:deleted',
         REPORT_PROCESSING: 'report:processing',
+        DEAD_LETTER_QUEUE: 'dead:letter',
     },
     REDIS_GROUPS: {
         EXPENSE_CREATED: 'expense_created',
@@ -23,7 +24,8 @@ export const ASYNC_WORKER = {
         UNRECEIVED_ENTRY: '>',
         PENDING_ENTRY: '0-0',
     },
-    ACK_SUCCESS: 1,
+    REDIS_ACK_SUCCESS: 1,
+    REDIS_MAX_RETRIES: 5,
 } as const;
 
 export const DEPENDENCY_INJECTION_PROVIDERS = {

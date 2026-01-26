@@ -1,19 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { BaseRepository } from '../common/repositories/base.repository';
 import { CashFlowByDay } from './entities/cash-flow-by-day.entity';
-import {
-    InjectTransactionHost,
-    TransactionHost,
-} from '@nestjs-cls/transactional';
+import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterTypeOrm } from '@nestjs-cls/transactional-adapter-typeorm';
 import { DeepPartial, FindOperator, FindOptionsOrder, MoreThan } from 'typeorm';
 
 @Injectable()
 export class CashFlowByDayRepository extends BaseRepository<CashFlowByDay> {
-    constructor(
-        @InjectTransactionHost('default')
-        txHost: TransactionHost<TransactionalAdapterTypeOrm>,
-    ) {
+    constructor(txHost: TransactionHost<TransactionalAdapterTypeOrm>) {
         super(txHost, CashFlowByDay);
     }
 

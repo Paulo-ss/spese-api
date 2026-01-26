@@ -6,13 +6,12 @@ import { CashFlowService } from 'src/cash-flow/cash-flow.service';
 import { ITransactionMessage } from 'src/async-worker/types/messages';
 import { OperationType } from 'src/common/interfaces/operation-type';
 import { BankAccountsService } from '../../../../bank-accounts/bank-accounts.service';
-import { CommonService } from '../../../../common/common.service';
 import { InvoiceService } from '../../../../credit-cards/invoice.service';
+import { Transactional } from '@nestjs-cls/transactional';
 
 @Injectable()
 export class ExpenseCreatedSubscriber extends BaseSubscriber<ITransactionMessage> {
     constructor(
-        private readonly commonService: CommonService,
         private readonly cashFlowService: CashFlowService,
         private readonly bankAccountService: BankAccountsService,
         private readonly invoiceService: InvoiceService,
@@ -32,6 +31,7 @@ export class ExpenseCreatedSubscriber extends BaseSubscriber<ITransactionMessage
         return ASYNC_WORKER.REDIS_STREAMS.EXPENSE_CREATED;
     }
 
+    @Transactional()
     override async onMessage(expense: ITransactionMessage): Promise<void> {
         try {
             this.logger.log(
@@ -39,21 +39,17 @@ export class ExpenseCreatedSubscriber extends BaseSubscriber<ITransactionMessage
                 expense,
             );
 
-            await this.commonService.confirmTransaction(async () => {
-                await this.cashFlowService.updateCashFlowForTransaction({
-                    transaction: expense,
-                    operation: OperationType.INSERT,
-                });
-                await this.bankAccountService.updateCurrentBalanceForTransaction(
-                    {
-                        transaction: expense,
-                        operation: OperationType.INSERT,
-                    },
-                );
-                await this.invoiceService.updateInvoiceForTransaction({
-                    transaction: expense,
-                    operation: OperationType.INSERT,
-                });
+            await this.cashFlowService.updateCashFlowForTransaction({
+                transaction: expense,
+                operation: OperationType.INSERT,
+            });
+            await this.bankAccountService.updateCurrentBalanceForTransaction({
+                transaction: expense,
+                operation: OperationType.INSERT,
+            });
+            await this.invoiceService.updateInvoiceForTransaction({
+                transaction: expense,
+                operation: OperationType.INSERT,
             });
         } catch (error) {
             this.logger.error('EXPENSE CREATED SUBSCRIBER ERROR: ', { error });

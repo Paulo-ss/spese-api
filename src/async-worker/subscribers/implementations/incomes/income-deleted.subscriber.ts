@@ -6,12 +6,10 @@ import { CashFlowService } from 'src/cash-flow/cash-flow.service';
 import { ITransactionMessage } from 'src/async-worker/types/messages';
 import { OperationType } from 'src/common/interfaces/operation-type';
 import { BankAccountsService } from '../../../../bank-accounts/bank-accounts.service';
-import { CommonService } from '../../../../common/common.service';
 
 @Injectable()
 export class IncomeDeletedSubscriber extends BaseSubscriber<ITransactionMessage> {
     constructor(
-        private readonly commonService: CommonService,
         private readonly cashFlowService: CashFlowService,
         private readonly bankAccountService: BankAccountsService,
     ) {
@@ -37,17 +35,13 @@ export class IncomeDeletedSubscriber extends BaseSubscriber<ITransactionMessage>
                 income,
             );
 
-            await this.commonService.confirmTransaction(async () => {
-                await this.cashFlowService.updateCashFlowForTransaction({
-                    transaction: income,
-                    operation: OperationType.DELETE,
-                });
-                await this.bankAccountService.updateCurrentBalanceForTransaction(
-                    {
-                        transaction: income,
-                        operation: OperationType.DELETE,
-                    },
-                );
+            await this.cashFlowService.updateCashFlowForTransaction({
+                transaction: income,
+                operation: OperationType.DELETE,
+            });
+            await this.bankAccountService.updateCurrentBalanceForTransaction({
+                transaction: income,
+                operation: OperationType.DELETE,
             });
         } catch (error) {
             this.logger.error('INCOME DELETED SUBSCRIBER ERROR: ', { error });

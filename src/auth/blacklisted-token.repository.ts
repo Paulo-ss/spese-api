@@ -1,20 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { BaseRepository } from '../common/repositories/base.repository';
 import { BlacklistedToken } from './entities/blacklisted-token.entity';
-import {
-    InjectTransactionHost,
-    TransactionHost,
-} from '@nestjs-cls/transactional';
+import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterTypeOrm } from '@nestjs-cls/transactional-adapter-typeorm';
 import { DeepPartial } from 'typeorm';
 import { User } from '../users/entities/user.entity';
 
 @Injectable()
 export class BlacklistedTokenRepository extends BaseRepository<BlacklistedToken> {
-    constructor(
-        @InjectTransactionHost('default')
-        txHost: TransactionHost<TransactionalAdapterTypeOrm>,
-    ) {
+    constructor(txHost: TransactionHost<TransactionalAdapterTypeOrm>) {
         super(txHost, BlacklistedToken);
     }
 

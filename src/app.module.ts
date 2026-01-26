@@ -88,7 +88,6 @@ import { DataSource } from 'typeorm';
             ],
             synchronize: !JSON.parse(process.env.IS_PRODUCTION),
             useUTC: true,
-            logging: true,
         }),
         ClsModule.forRoot({
             global: true,
@@ -97,7 +96,6 @@ import { DataSource } from 'typeorm';
             },
             plugins: [
                 new ClsPluginTransactional({
-                    connectionName: 'default',
                     imports: [TypeOrmModule],
                     adapter: new TransactionalAdapterTypeOrm({
                         dataSourceToken: DataSource,

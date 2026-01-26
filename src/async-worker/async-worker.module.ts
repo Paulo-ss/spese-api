@@ -8,6 +8,7 @@ import { RedisConsumer } from './consumer/redis.consumer';
 import { IBaseMessage } from './types/messages';
 import { RedisConnectionFactory } from './connection/redis-connection-factory';
 import { RedisConnection } from './connection/redis-connection';
+import { ClsService } from 'nestjs-cls';
 
 @Module({
     imports: [forwardRef(() => SubscribersModule)],
@@ -25,6 +26,7 @@ export class AsyncWorkerModule implements OnModuleInit {
         private readonly redisConnectionFactory: RedisConnectionFactory,
         @Inject(DEPENDENCY_INJECTION_PROVIDERS.ASYNC_WORKER_SUBSCRIBERS)
         private readonly subscribers: ISubscriber<IBaseMessage>[],
+        private readonly clsService: ClsService,
     ) {}
 
     async initializeSubscribers(
@@ -44,6 +46,7 @@ export class AsyncWorkerModule implements OnModuleInit {
                         `${subscriber.consumerName}-${i + 1}`,
                         subscriber.onMessage.bind(subscriber),
                         subscriber.getGroupConfig(),
+                        this.clsService,
                     ),
                 );
             }

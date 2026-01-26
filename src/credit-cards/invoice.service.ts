@@ -135,6 +135,7 @@ export class InvoiceService {
         });
     }
 
+    @Transactional()
     public async createInvoicesForExpense({
         creditCard,
         installments,
@@ -283,30 +284,24 @@ export class InvoiceService {
         transaction: ITransactionMessage;
         operation: OperationType;
     }) {
-        await this.commonService.confirmTransaction(async (entityManager) => {
-            const { invoiceId, transactionType, originalPrice, price } =
-                transaction;
+        const { invoiceId, transactionType, originalPrice, price } =
+            transaction;
 
-            const invoice = await entityManager.findOne(Invoice, {
-                where: { id: invoiceId },
-            });
+        const invoice = await this.findById(invoiceId);
 
-            if (invoice) {
-                const transformedPrice =
-                    this.commonService.transformPriceByTransactionAndOperationType(
-                        {
-                            transactionType,
-                            operation,
-                            price,
-                            originalPrice,
-                        },
-                    );
+        if (invoice) {
+            const transformedPrice =
+                this.commonService.transformPriceByTransactionAndOperationType({
+                    transactionType,
+                    operation,
+                    price,
+                    originalPrice,
+                });
 
-                invoice.currentPrice += transformedPrice;
-                invoice.totalPrice += transformedPrice;
+            invoice.currentPrice += transformedPrice;
+            invoice.totalPrice += transformedPrice;
 
-                await entityManager.save(Invoice, invoice);
-            }
-        });
+            await this.invoiceRepository.upsert(invoice);
+        }
     }
 }

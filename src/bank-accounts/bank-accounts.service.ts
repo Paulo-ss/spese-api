@@ -93,37 +93,23 @@ export class BankAccountsService {
         transaction: ITransactionMessage;
         operation: OperationType;
     }) {
-        return this.commonService.confirmTransaction(async (entityManager) => {
-            const {
-                userId,
-                bankAccountId,
-                price,
-                originalPrice,
-                transactionType,
-            } = transaction;
+        const { userId, bankAccountId, price, originalPrice, transactionType } =
+            transaction;
 
-            const bankAccount = await entityManager.findOne(BankAccount, {
-                where: {
-                    userId,
-                    id: bankAccountId,
-                },
-            });
+        const bankAccount = await this.findById(bankAccountId, userId);
 
-            if (bankAccount) {
-                const transformedPrice =
-                    this.commonService.transformPriceByTransactionAndOperationType(
-                        {
-                            price,
-                            originalPrice,
-                            operation,
-                            transactionType,
-                        },
-                    );
+        if (bankAccount) {
+            const transformedPrice =
+                this.commonService.transformPriceByTransactionAndOperationType({
+                    price,
+                    originalPrice,
+                    operation,
+                    transactionType,
+                });
 
-                bankAccount.currentBalance += transformedPrice;
+            bankAccount.currentBalance += transformedPrice;
 
-                await entityManager.save(BankAccount, bankAccount);
-            }
-        });
+            await this.bankAccountRepository.upsert(bankAccount);
+        }
     }
 }

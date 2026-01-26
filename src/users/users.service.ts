@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, Logger } from '@nestjs/common';
 import { User } from './entities/user.entity';
 import { CommonService } from 'src/common/common.service';
 import { isEmail } from 'class-validator';
@@ -8,6 +8,8 @@ import { UserRepository } from './user.repository';
 
 @Injectable()
 export class UsersService {
+    private readonly logger = new Logger(UsersService.name);
+
     constructor(
         private readonly userRepository: UserRepository,
         private readonly commonService: CommonService,
@@ -76,15 +78,20 @@ export class UsersService {
         password: string,
         email: string,
     ): Promise<User> {
-        await this.checkIfEmailAlreadyExists(email);
+        try {
+            await this.checkIfEmailAlreadyExists(email);
 
-        const formattedName = this.commonService.formatName(name);
-        return await this.userRepository.upsert({
-            email,
-            name: formattedName,
-            username: await this.generateUsername(formattedName),
-            password: await hash(password, 10),
-        });
+            const formattedName = this.commonService.formatName(name);
+            return await this.userRepository.upsert({
+                email,
+                name: formattedName,
+                username: await this.generateUsername(formattedName),
+                password: await hash(password, 10),
+            });
+        } catch (error) {
+            this.logger.error('User sign up error: ', error);
+            throw error;
+        }
     }
 
     public async externalOauthCreate(
@@ -100,12 +107,6 @@ export class UsersService {
             username: await this.generateUsername(formattedName),
             confirmed: true,
         });
-    }
-
-    public async delete(userId: number): Promise<void> {
-        const user = await this.findOneById(userId);
-
-        await this.userRepository.delete(user);
     }
 
     public async resetPassword(
