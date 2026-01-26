@@ -1,7 +1,6 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Expense } from './entities/expense.entity';
-import { FindOptionsRelations, Repository } from 'typeorm';
+import { DeepPartial, FindOptionsRelations } from 'typeorm';
 import { CommonService } from 'src/common/common.service';
 import { FindExpensesFiltersDto } from './dto/find-expenses-filters.dto';
 import { CreateExpenseDto } from './dto/create-expense.dto';
@@ -13,51 +12,42 @@ import { Invoice } from 'src/credit-cards/entities/invoice.entity';
 import { InvoiceStatus } from 'src/credit-cards/enums/invoice-status.enum';
 import { IGenericMessageResponse } from 'src/common/interfaces/generic-message-response.interface';
 import { ExpenseStatus } from './enums/expense-status.enum';
-import { ExpenseCategory } from './enums/expense-category.enum';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { CategoryService } from 'src/category/category.service';
 import { RedisPublisher } from 'src/async-worker/publisher/redis.publisher';
 import { ASYNC_WORKER } from 'src/common/constants/constants';
 import { ITransactionMessage } from 'src/async-worker/types/messages';
-import {
-    getFirstDayOfMonth,
-    getLastDayOfMonth,
-    formatDate,
-} from '../common/utils/dates.utils';
 import { buildTransactionMessage } from '../async-worker/utils/messages.builders';
 import { CreditCard } from '../credit-cards/entities/credit-card.entity';
 import { Category } from '../category/entities/category.entity';
+import { ExpenseRepository } from './expense.repository';
+import { IExpense } from './interfaces/expense.interface';
+import { Transactional } from '@nestjs-cls/transactional';
+import dayjs from 'dayjs';
 
 @Injectable()
 export class ExpensesService {
     constructor(
-        @InjectRepository(Expense)
-        private readonly expensesRepository: Repository<Expense>,
         @Inject(forwardRef(() => InvoiceService))
         private readonly invoiceService: InvoiceService,
         private readonly bankAccountService: BankAccountsService,
         private readonly creditCardService: CreditCardsService,
         private readonly commonService: CommonService,
         private readonly categoryService: CategoryService,
-        @Inject()
         private readonly redisPublisher: RedisPublisher<ITransactionMessage>,
+        private readonly expenseRepository: ExpenseRepository,
     ) {}
 
     public async findById(
         expenseId: number,
         userId: number,
-        relations: FindOptionsRelations<Expense> = {
-            invoice: { creditCard: false, expenses: false },
-            customCategory: { expenses: false },
-        },
+        relations: FindOptionsRelations<Expense>,
     ): Promise<Expense> {
-        const expense = await this.expensesRepository.findOne({
-            where: {
-                id: expenseId,
-                userId,
-            },
+        const expense = await this.expenseRepository.findById(
+            expenseId,
+            userId,
             relations,
-        });
+        );
         this.commonService.checkEntityExistence(expense, 'Expense');
 
         return expense;
@@ -67,92 +57,13 @@ export class ExpensesService {
         filters: FindExpensesFiltersDto,
         ignoreCreditCard = false,
     ): Promise<Expense[]> {
-        const query = this.expensesRepository
-            .createQueryBuilder('e')
-            .leftJoinAndSelect('e.bankAccount', 'ba')
-            .leftJoinAndSelect('e.customCategory', 'cat')
-            .leftJoin('e.creditCard', 'cc');
-
-        if (filters.month) {
-            const firstDayOfTheMonth = formatDate(
-                getFirstDayOfMonth(filters.month),
-                'YYYY-MM-DD',
-            );
-            const lastDayOfTheMonth = formatDate(
-                getLastDayOfMonth(filters.month),
-                'YYYY-MM-DD',
-            );
-
-            query.where(
-                'e.expense_date between :firstDayOfTheMonth and :lastDayOfTheMonth',
-                {
-                    firstDayOfTheMonth: firstDayOfTheMonth,
-                    lastDayOfTheMonth: lastDayOfTheMonth,
-                },
-            );
-        }
-
-        if (filters.fromDate && filters.toDate) {
-            query.where('e.expense_date between :fromDate and :toDate', {
-                fromDate: filters.fromDate,
-                toDate: filters.toDate,
-            });
-        }
-
-        if (filters.category) {
-            if (filters.category === ExpenseCategory.CUSTOM) {
-                query.andWhere('e.customCategory = :customCategory', {
-                    customCategory: filters.customCategory,
-                });
-            }
-
-            if (filters.category !== ExpenseCategory.CUSTOM) {
-                query.andWhere('e.category = :category', {
-                    category: filters.category,
-                });
-            }
-        }
-
-        if (filters.name) {
-            query.andWhere('UPPER(e.name) like :name', {
-                name: `%${filters.name.toUpperCase()}%`,
-            });
-        }
-
-        if (filters.creditCardId) {
-            query.andWhere('cc.id = :creditCardId', {
-                creditCardId: filters.creditCardId,
-            });
-        }
-
-        if (ignoreCreditCard) {
-            query.andWhere('e.creditCard is null');
-        }
-
-        if (filters.priceRange) {
-            const [min, max] = filters.priceRange;
-
-            query.andWhere('e.price between :min and :max', {
-                min,
-                max,
-            });
-        }
-
-        if (filters.status) {
-            query.andWhere('e.status = :status', { status: filters.status });
-        }
-
-        if (filters.type) {
-            query.andWhere('e.expense_type = :type', { type: filters.type });
-        }
-
-        return query
-            .andWhere('e.user_id = :userId', { userId: filters.userId })
-            .orderBy('e.expense_date', 'DESC')
-            .addOrderBy('cat.name', 'ASC')
-            .getMany();
+        return await this.expenseRepository.findByFilters(
+            filters,
+            ignoreCreditCard,
+        );
     }
 
+    @Transactional()
     public async createInstallmentExpenses({
         createExpenseDto,
         userId,
@@ -178,15 +89,14 @@ export class ExpensesService {
             expenseDate,
         } = createExpenseDto;
 
-        const installmentExpenses: Expense[] = [];
+        const installmentExpenses: DeepPartial<IExpense>[] = [];
 
         for (let i = 1; i <= installments; i++) {
-            const nextMonthExpenseDate = new Date(expenseDate);
-            nextMonthExpenseDate.setMonth(
-                nextMonthExpenseDate.getMonth() + i - 1,
-            );
+            const nextMonthExpenseDate = dayjs(expenseDate)
+                .add(1, 'month')
+                .toDate();
 
-            const installmentExpense = this.expensesRepository.create({
+            const installmentExpense: DeepPartial<IExpense> = {
                 expenseType,
                 status:
                     invoices[i - 1].status === InvoiceStatus.PAID
@@ -203,19 +113,20 @@ export class ExpensesService {
                 totalInstallments: installments,
                 userId,
                 expenseDate:
-                    i === 1 ? new Date(expenseDate) : nextMonthExpenseDate,
-            });
+                    i === 1
+                        ? dayjs(expenseDate).toDate()
+                        : nextMonthExpenseDate,
+            };
 
-            const savedExpense = await this.commonService.saveEntity(
-                this.expensesRepository,
-                installmentExpense,
-            );
-            installmentExpenses.push(savedExpense);
+            installmentExpenses.push(installmentExpense);
         }
+
+        const expenses =
+            await this.expenseRepository.upsert(installmentExpenses);
 
         void this.redisPublisher.batchPublishToStream({
             streamName: ASYNC_WORKER.REDIS_STREAMS.EXPENSE_CREATED,
-            messages: installmentExpenses.map((expense) =>
+            messages: expenses.map((expense) =>
                 buildTransactionMessage({
                     transaction: expense,
                     userId: expense.userId,
@@ -226,6 +137,7 @@ export class ExpensesService {
         });
     }
 
+    @Transactional()
     public async create(
         createExpenseDto: CreateExpenseDto,
         userId: number,
@@ -248,7 +160,7 @@ export class ExpensesService {
             : null;
 
         let bankAccount: BankAccount | null = null;
-        if (bankAccountId || (creditCard && creditCard.bankAccount)) {
+        if (bankAccountId || creditCard?.bankAccount) {
             bankAccount = await this.bankAccountService.findById(
                 bankAccountId ?? creditCard.bankAccount.id,
                 userId,
@@ -284,7 +196,7 @@ export class ExpensesService {
             );
         }
 
-        const expense = this.expensesRepository.create({
+        const expense: DeepPartial<IExpense> = {
             expenseType,
             status,
             name,
@@ -296,21 +208,21 @@ export class ExpensesService {
             invoice: invoices[0],
             userId,
             expenseDate: new Date(expenseDate),
-        });
+        };
 
-        await this.commonService.saveEntity(this.expensesRepository, expense);
+        const newExpense = await this.expenseRepository.upsert(expense);
 
         void this.redisPublisher.publishToStream({
             streamName: ASYNC_WORKER.REDIS_STREAMS.EXPENSE_CREATED,
             message: buildTransactionMessage({
-                transaction: expense,
-                userId: expense.userId,
-                bankAccountId: expense.bankAccount?.id,
-                invoiceId: expense.invoice?.id,
+                transaction: newExpense,
+                userId: newExpense.userId,
+                bankAccountId: newExpense.bankAccount?.id,
+                invoiceId: newExpense.invoice?.id,
             }),
         });
 
-        return expense;
+        return newExpense;
     }
 
     public async update(
@@ -318,7 +230,7 @@ export class ExpensesService {
         userId: number,
         updateDto: UpdateExpenseDto,
     ): Promise<Expense> {
-        const expense = await this.findById(expenseId, userId);
+        let expense = await this.expenseRepository.findById(expenseId, userId);
         const originalPrice = expense.price;
 
         if (updateDto.category) {
@@ -340,7 +252,7 @@ export class ExpensesService {
             expense.name = updateDto.name;
         }
 
-        await this.commonService.saveEntity(this.expensesRepository, expense);
+        expense = await this.expenseRepository.upsert(expense);
 
         void this.redisPublisher.publishToStream({
             streamName: ASYNC_WORKER.REDIS_STREAMS.EXPENSE_UPDATED,
@@ -359,7 +271,7 @@ export class ExpensesService {
     public async payExpense(
         expenseId: number,
     ): Promise<IGenericMessageResponse> {
-        await this.expensesRepository.save({
+        await this.expenseRepository.upsert({
             id: expenseId,
             status: ExpenseStatus.PAID,
         });
@@ -373,9 +285,9 @@ export class ExpensesService {
         id: number,
         userId: number,
     ): Promise<IGenericMessageResponse> {
-        const expense = await this.findById(id, userId);
+        const expense = await this.expenseRepository.findById(id, userId);
 
-        await this.commonService.removeEntity(this.expensesRepository, expense);
+        await this.expenseRepository.delete(expense);
 
         void this.redisPublisher.publishToStream({
             streamName: ASYNC_WORKER.REDIS_STREAMS.EXPENSE_DELETED,

@@ -75,6 +75,7 @@ import { DataSource } from 'typeorm';
             ],
             synchronize: !JSON.parse(process.env.IS_PRODUCTION),
             useUTC: true,
+            logging: true,
         }),
         ScheduleModule.forRoot(),
         ClsModule.forRoot({
