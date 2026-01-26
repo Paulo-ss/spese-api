@@ -17,7 +17,7 @@ import { ITransactionMessage } from '../async-worker/types/messages';
 import { ASYNC_WORKER } from '../common/constants/constants';
 import { buildTransactionMessage } from '../async-worker/utils/messages.builders';
 import { IncomeRepository } from './income.repository';
-import dayjs from 'dayjs';
+import * as dayjs from 'dayjs';
 import {
     formatDate,
     getFirstDayOfMonth,

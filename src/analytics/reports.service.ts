@@ -16,6 +16,7 @@ import { RedisPublisher } from '../async-worker/publisher/redis.publisher';
 import { IReportRequestedMessage } from '../async-worker/types/messages';
 import { ASYNC_WORKER } from '../common/constants/constants';
 import { ReportRepository } from './report.repository';
+import { getToday } from '../common/utils/dates.utils';
 
 @Injectable()
 export class ReportsService {
@@ -63,7 +64,7 @@ export class ReportsService {
                 ...reportDto,
                 userId,
                 reportId: newReport.id,
-                timestamp: new Date().toISOString(),
+                timestamp: getToday().toISOString(),
             },
         });
 

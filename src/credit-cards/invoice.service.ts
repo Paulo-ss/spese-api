@@ -20,7 +20,7 @@ import { ITransactionMessage } from '../async-worker/types/messages';
 import { OperationType } from '../common/interfaces/operation-type';
 import { InvoiceRepository } from './invoice.repository';
 import { Transactional } from '@nestjs-cls/transactional';
-import dayjs from 'dayjs';
+import * as dayjs from 'dayjs';
 
 @Injectable()
 export class InvoiceService {

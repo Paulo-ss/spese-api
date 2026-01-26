@@ -5,6 +5,7 @@ import { InvoiceStatus } from '../enums/invoice-status.enum';
 import { getInvoiceMonth } from '../utils/get-invoice-month.util';
 import { getNextBusinessDay, getToday } from 'src/common/utils/dates.utils';
 import { Invoice } from '../entities/invoice.entity';
+import * as dayjs from 'dayjs';
 
 export class SimplifiedCreditCardDto implements SimplifiedCreditCardInterface {
     public id: number;
@@ -55,15 +56,20 @@ export class SimplifiedCreditCardDto implements SimplifiedCreditCardInterface {
 
         const currentMonthInvoiceTotal = currentInvoice?.currentPrice ?? 0;
 
-        let closingDate = currentInvoice ? currentInvoice.closingDate : null;
-        let dueDate = currentInvoice ? currentInvoice.dueDate : null;
+        let closingDate = currentInvoice
+            ? dayjs(currentInvoice.closingDate)
+            : null;
+        let dueDate = currentInvoice ? dayjs(currentInvoice.dueDate) : null;
 
         if (!closingDate && !dueDate) {
             const { month, year } = getInvoiceMonth(
                 creditCard.closingDay,
                 getToday().toDate(),
             );
-            closingDate = new Date(year, month, creditCard.closingDay);
+            closingDate = dayjs()
+                .year(year)
+                .month(month)
+                .date(creditCard.closingDay);
 
             const closingMonth =
                 creditCard.dueDay < creditCard.closingDay
@@ -72,15 +78,18 @@ export class SimplifiedCreditCardDto implements SimplifiedCreditCardInterface {
             const closingYear = closingMonth < month ? year + 1 : year;
 
             dueDate = getNextBusinessDay(
-                new Date(closingYear, closingMonth, creditCard.dueDay),
-            ).toDate();
+                dayjs()
+                    .year(closingYear)
+                    .month(closingMonth)
+                    .date(creditCard.dueDay),
+            );
         }
 
         return new SimplifiedCreditCardDto({
             id: creditCard.id,
             bank: creditCard.bank,
-            closingDate,
-            dueDate,
+            closingDate: closingDate.toDate(),
+            dueDate: dueDate.toDate(),
             currentMonthInvoiceTotal,
             otherMonthsTotal,
             closedTotal,

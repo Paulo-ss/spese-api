@@ -207,7 +207,7 @@ export class ExpensesService {
             customCategory: customCategoryId ? customCategory : null,
             invoice: invoices[0],
             userId,
-            expenseDate: new Date(expenseDate),
+            expenseDate: dayjs(expenseDate).toDate(),
         };
 
         const newExpense = await this.expenseRepository.upsert(expense);

@@ -14,7 +14,7 @@ import { InvoiceStatus } from './enums/invoice-status.enum';
 import { BankAccountsService } from 'src/bank-accounts/bank-accounts.service';
 import { getFirstDayOfMonth } from '../common/utils/dates.utils';
 import { CreditCardRepository } from './credit-card.repository';
-import dayjs from 'dayjs';
+import * as dayjs from 'dayjs';
 
 @Injectable()
 export class CreditCardsService {

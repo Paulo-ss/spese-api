@@ -54,7 +54,6 @@ export class AuthService {
         await this.blacklistedTokenRepository.upsert({
             user,
             tokenId,
-            createdAt: new Date().toISOString(),
         });
     }
 

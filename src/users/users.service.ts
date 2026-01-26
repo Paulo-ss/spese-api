@@ -34,10 +34,6 @@ export class UsersService {
         }
     }
 
-    public async findAll(): Promise<User[]> {
-        return await this.userRepository.findAll();
-    }
-
     public async findOneById(userId: number): Promise<User> {
         const user = await this.userRepository.findById(userId);
         this.commonService.checkEntityExistence(user, 'Usuário');
@@ -88,8 +84,6 @@ export class UsersService {
             name: formattedName,
             username: await this.generateUsername(formattedName),
             password: await hash(password, 10),
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
         });
     }
 
@@ -104,8 +98,6 @@ export class UsersService {
             email,
             name: formattedName,
             username: await this.generateUsername(formattedName),
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
             confirmed: true,
         });
     }

@@ -11,10 +11,6 @@ export class UserRepository extends BaseRepository<User> {
         super(txHost, User);
     }
 
-    public async findAll(): Promise<User[]> {
-        return await this.repository.find();
-    }
-
     public async findById(userId: number): Promise<User> {
         return await this.repository.findOneBy({ id: userId });
     }
